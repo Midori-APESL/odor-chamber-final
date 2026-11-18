@@ -1,0 +1,1985 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Odor Chamber Sensor Dashboard</title>
+<style>
+  :root {
+    --bg: #0f1521;
+    --panel: #161e2e;
+    --panel-2: #1d2739;
+    --border: #2a3448;
+    --text: #e7ecf5;
+    --text-dim: #8a94a8;
+    --accent: #4fd1a5;
+    --accent-dim: #2c6b53;
+    --red: #ef5a6f;
+    --amber: #e0a840;
+    --blue: #5b9dea;
+    --purple: #a685e2;
+    font-size: 15px;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+  }
+  header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 20px;
+    border-bottom: 1px solid var(--border);
+    background: var(--panel);
+  }
+  header h1 { font-size: 17px; margin: 0; font-weight: 600; }
+  header .sub { color: var(--text-dim); font-size: 12px; margin-top: 2px; }
+  .layout {
+    display: grid;
+    grid-template-columns: 340px 1fr;
+    gap: 16px;
+    padding: 16px;
+    align-items: start;
+  }
+  @media (max-width: 900px) {
+    .layout { grid-template-columns: 1fr; }
+  }
+  .card {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 14px;
+    margin-bottom: 14px;
+  }
+  .card h2 {
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--text-dim);
+    margin: 0 0 10px 0;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  label { font-size: 12px; color: var(--text-dim); display: block; margin-bottom: 4px; }
+  select, input[type=text], input[type=number] {
+    width: 100%;
+    background: var(--panel-2);
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 7px 9px;
+    border-radius: 6px;
+    font-size: 13px;
+    margin-bottom: 10px;
+  }
+  button {
+    font-size: 13px;
+    font-weight: 600;
+    border: 1px solid var(--border);
+    background: var(--panel-2);
+    color: var(--text);
+    padding: 8px 12px;
+    border-radius: 6px;
+    cursor: pointer;
+  }
+  button:hover:not(:disabled) { border-color: var(--accent); }
+  button:disabled { opacity: 0.4; cursor: not-allowed; }
+  button.primary { background: var(--accent-dim); border-color: var(--accent); color: #d8fff0; }
+  button.danger { background: #4a2530; border-color: var(--red); color: #ffd7dc; }
+  .row { display: flex; gap: 8px; }
+  .row > * { flex: 1; }
+  .status-dot {
+    display: inline-block;
+    width: 9px; height: 9px;
+    border-radius: 50%;
+    margin-right: 7px;
+    background: var(--text-dim);
+  }
+  .status-line { display: flex; align-items: center; font-size: 13px; margin-bottom: 10px; }
+  .badge {
+    display: inline-block;
+    font-size: 11px;
+    padding: 2px 8px;
+    border-radius: 20px;
+    background: var(--panel-2);
+    border: 1px solid var(--border);
+    color: var(--text-dim);
+  }
+  .badge.on { border-color: var(--accent); color: var(--accent); }
+  #serialMonitor {
+    background: #0a0e16;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    height: 100px;
+    overflow-y: auto;
+    padding: 6px 8px;
+    font-family: ui-monospace, "SF Mono", Menlo, monospace;
+    font-size: 11px;
+    color: #7ee0a8;
+    white-space: pre-wrap;
+  }
+  .readout-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+  }
+  .readout {
+    background: var(--panel-2);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 8px 10px;
+  }
+  .readout .label { font-size: 10px; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.04em; }
+  .readout .value { font-size: 18px; font-weight: 600; margin-top: 2px; }
+  .readout .value.dim { color: var(--text-dim); font-weight: 400; font-size: 14px; }
+  .chart-card {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 16px;
+  }
+  .chart-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-bottom: 8px;
+  }
+  .chart-title { font-size: 15px; font-weight: 600; }
+  .chart-title .fname { color: var(--accent); }
+  .chart-controls { display: flex; gap: 8px; align-items: center; }
+  .chart-controls select { width: auto; margin-bottom: 0; }
+  .panel { border-top: 1px solid var(--border); padding-top: 10px; margin-top: 10px; }
+  .panel:first-child { border-top: none; padding-top: 0; margin-top: 0; }
+  .panel-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 4px; }
+  .panel-select { width: auto; margin-bottom: 0; font-size: 12px; padding: 4px 7px; }
+  .panel-value { font-size: 13px; font-weight: 600; color: var(--accent); font-family: ui-monospace, "SF Mono", monospace; }
+  .panel-canvas { width: 100%; height: 150px; display: block; border-radius: 6px; }
+  .marker-list { max-height: 110px; overflow-y: auto; font-size: 12px; }
+  .marker-list div { padding: 3px 0; border-bottom: 1px solid var(--border); color: var(--text-dim); }
+  .marker-list span.t { color: var(--accent); font-family: ui-monospace, monospace; margin-right: 6px; }
+  .hint { font-size: 11px; color: var(--text-dim); margin-top: 6px; line-height: 1.4; }
+  .unsupported {
+    margin: 40px auto; max-width: 560px; text-align: center;
+    background: var(--panel); border: 1px solid var(--red); border-radius: 10px; padding: 24px;
+  }
+  #startNamePanel {
+    display: none;
+    background: var(--panel-2);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 10px;
+    margin-bottom: 10px;
+  }
+
+  /* ---------- Tab bar (switches between Live Sensors and the BME688
+     odour vector graph) ---------- */
+  nav.tabbar {
+    display: flex;
+    gap: 4px;
+    padding: 0 20px;
+    background: var(--panel);
+    border-bottom: 1px solid var(--border);
+  }
+  .tabbtn {
+    background: none;
+    border: none;
+    border-bottom: 2px solid transparent;
+    color: var(--text-dim);
+    font-size: 13px;
+    font-weight: 600;
+    padding: 12px 4px 10px;
+    margin-bottom: -1px;
+    cursor: pointer;
+  }
+  .tabbtn:hover { color: var(--text); }
+  .tabbtn.active { color: var(--accent); border-bottom-color: var(--accent); }
+  .tabview[hidden] { display: none; }
+
+  /* ---------- Odour Vector Graph tab (BME688 latent-space plot) ----------
+     Namespaced: this tab has its own light/dark theme and its own
+     --vg*/--c-* custom properties, kept separate from the Live Sensors
+     tab's --panel/--border/--accent so the two views can't bleed into
+     each other. Everything here is scoped under #viewVector or the
+     vg-prefixed classes, never bare `body`/`html`/`:root`-level color. */
+  :root {
+    --vg-surface:      #f2f3ee;
+    --vgpanel:         #fcfcfb;
+    --vgpanel2:        #f6f7f2;
+    --vg-ink:          #14181a;
+    --vg-ink-2:        #4c534e;
+    --muted:           #8b8f87;
+    --grid:            #dedcd1;
+    --vgborder:        rgba(11,11,11,0.10);
+    --vgaccent:        #4a3aa7;
+    --vgaccent-ink:    #ffffff;
+    --vgaccent-soft:   rgba(74,58,167,0.09);
+    --warn-bg:         #fbe9d8;
+    --warn-ink:        #7a3f10;
+    --warn-border:     #e7b988;
+
+    --c-normal:   #2a78d6;
+    --c-nh3:      #eb6834;
+    --c-linalyl:  #1baf7a;
+    --c-ethyl:    #b5810a;
+    --c-ethanoic: #c94f80;
+    --c-sulfide:  #7d5ba6;
+    --c-phenolic: #1f8a8c;
+    --c-terpalc:  #b5432e;
+    --c-unknown:  #d4b400;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:where(:not([data-theme="light"])) {
+      --vg-surface:      #101314;
+      --vgpanel:         #1a1c1a;
+      --vgpanel2:        #1f2220;
+      --vg-ink:          #edf1ee;
+      --vg-ink-2:        #b9beb6;
+      --muted:           #8b9089;
+      --grid:            #2b2f2c;
+      --vgborder:        rgba(255,255,255,0.10);
+      --vgaccent:        #9085e9;
+      --vgaccent-ink:    #10121a;
+      --vgaccent-soft:   rgba(144,133,233,0.14);
+      --warn-bg:         #33240f;
+      --warn-ink:        #f0c893;
+      --warn-border:     #6a4a20;
+
+      --c-normal:   #3987e5;
+      --c-nh3:      #d95926;
+      --c-linalyl:  #2fc98d;
+      --c-ethyl:    #d1a12a;
+      --c-ethanoic: #e07aa8;
+      --c-sulfide:  #a98fdb;
+      --c-phenolic: #3db3b6;
+      --c-terpalc:  #d97a63;
+      --c-unknown:  #f0d846;
+    }
+  }
+  :root[data-theme="dark"] {
+    --vg-surface:      #101314;
+    --vgpanel:         #1a1c1a;
+    --vgpanel2:        #1f2220;
+    --vg-ink:          #edf1ee;
+    --vg-ink-2:        #b9beb6;
+    --muted:           #8b9089;
+    --grid:            #2b2f2c;
+    --vgborder:        rgba(255,255,255,0.10);
+    --vgaccent:        #9085e9;
+    --vgaccent-ink:    #10121a;
+    --vgaccent-soft:   rgba(144,133,233,0.14);
+    --warn-bg:         #33240f;
+    --warn-ink:        #f0c893;
+    --warn-border:     #6a4a20;
+
+    --c-normal:   #3987e5;
+    --c-nh3:      #d95926;
+    --c-linalyl:  #2fc98d;
+    --c-ethyl:    #d1a12a;
+    --c-ethanoic: #e07aa8;
+    --c-sulfide:  #a98fdb;
+    --c-phenolic: #3db3b6;
+    --c-terpalc:  #d97a63;
+    --c-unknown:  #f0d846;
+  }
+  :root[data-theme="light"] {
+    --vg-surface:      #f2f3ee;
+    --vgpanel:         #fcfcfb;
+    --vgpanel2:        #f6f7f2;
+    --vg-ink:          #14181a;
+    --vg-ink-2:        #4c534e;
+    --muted:           #8b8f87;
+    --grid:            #dedcd1;
+    --vgborder:        rgba(11,11,11,0.10);
+    --vgaccent:        #4a3aa7;
+    --vgaccent-ink:    #ffffff;
+    --vgaccent-soft:   rgba(74,58,167,0.09);
+    --c-normal:   #2a78d6;
+    --c-nh3:      #eb6834;
+    --c-linalyl:  #1baf7a;
+    --c-ethyl:    #b5810a;
+    --c-ethanoic: #c94f80;
+    --c-sulfide:  #7d5ba6;
+    --c-phenolic: #1f8a8c;
+    --c-terpalc:  #b5432e;
+    --c-unknown:  #d4b400;
+  }
+
+  .vg-mono {
+    font-family: ui-monospace, "SF Mono", "Cascadia Code", "Roboto Mono", Menlo, Consolas, monospace;
+  }
+
+  #viewVector {
+    background: var(--vg-surface);
+    color: var(--vg-ink);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .vg-page {
+    max-width: 1180px;
+    margin: 0 auto;
+    padding: 20px 24px 48px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  .vg-disclaimer {
+    display: flex;
+    gap: 10px;
+    align-items: flex-start;
+    background: var(--warn-bg);
+    border: 1px solid var(--warn-border);
+    color: var(--warn-ink);
+    border-radius: 3px;
+    padding: 10px 14px;
+    font-size: 0.83rem;
+    line-height: 1.5;
+  }
+  .vg-disclaimer b {
+    font-family: ui-monospace, "SF Mono", "Cascadia Code", "Roboto Mono", Menlo, Consolas, monospace;
+    letter-spacing: 0.03em;
+  }
+  .vg-disclaimer.reserve { background: var(--vgpanel2); border-color: var(--vgborder); color: var(--vg-ink-2); }
+
+  .vg-layout {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 320px;
+    gap: 20px;
+    align-items: start;
+  }
+  @media (max-width: 880px) {
+    .vg-layout { grid-template-columns: 1fr; }
+  }
+
+  .vg-panel {
+    background: var(--vgpanel);
+    border: 1px solid var(--vgborder);
+    border-radius: 4px;
+  }
+  .vg-panel-head {
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--vgborder);
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 12px;
+  }
+  .vg-panel-title {
+    font-family: ui-monospace, "SF Mono", "Cascadia Code", "Roboto Mono", Menlo, Consolas, monospace;
+    font-size: 0.72rem;
+    letter-spacing: 0.09em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+  .vg-panel-sub { font-size: 0.76rem; color: var(--muted); }
+
+  .vg-plot-wrap { padding: 8px 8px 4px; position: relative; overflow-x: auto; }
+  #plot { display: block; width: 100%; height: auto; min-width: 480px; }
+
+  .ring-label, .spoke-label {
+    font-family: ui-monospace, "SF Mono", "Cascadia Code", "Roboto Mono", Menlo, Consolas, monospace;
+    font-size: 9.5px;
+    fill: var(--muted);
+  }
+  .grid-line { stroke: var(--grid); stroke-width: 1; fill: none; }
+  .axis-line { stroke: var(--grid); stroke-width: 1; }
+
+  .vg-pt { transition: opacity 120ms ease; }
+  .vg-pt.dim { opacity: 0.06 !important; }
+  .vg-hit { fill: transparent; cursor: pointer; }
+
+  .centroid-vec { stroke-width: 2; fill: none; opacity: 0.9; }
+  .centroid-vec.reserved { stroke-dasharray: 3 3; opacity: 0.55; }
+  .centroid-mark { stroke: var(--vgpanel); stroke-width: 2.5; cursor: pointer; }
+  .centroid-mark:focus { outline: none; }
+  .centroid-mark:focus-visible { stroke: var(--vgaccent); stroke-width: 3; }
+  .centroid-label {
+    font-family: ui-monospace, "SF Mono", "Cascadia Code", "Roboto Mono", Menlo, Consolas, monospace;
+    font-size: 11px;
+    font-weight: 600;
+  }
+  .centroid-label-sub {
+    font-family: ui-monospace, "SF Mono", "Cascadia Code", "Roboto Mono", Menlo, Consolas, monospace;
+    font-size: 9.5px;
+    fill: var(--muted);
+  }
+
+  .vg-legend-foot {
+    padding: 10px 16px 14px;
+    font-size: 0.74rem;
+    color: var(--muted);
+    line-height: 1.55;
+    border-top: 1px solid var(--vgborder);
+  }
+
+  table.vg-legend-table { width: 100%; border-collapse: collapse; font-size: 0.82rem; }
+  table.vg-legend-table caption { display: none; }
+  table.vg-legend-table th {
+    text-align: left;
+    font-family: ui-monospace, "SF Mono", "Cascadia Code", "Roboto Mono", Menlo, Consolas, monospace;
+    font-size: 0.66rem;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--muted);
+    font-weight: 500;
+    padding: 9px 16px 7px;
+    border-bottom: 1px solid var(--vgborder);
+  }
+  table.vg-legend-table td {
+    padding: 9px 16px;
+    border-bottom: 1px solid var(--vgborder);
+    vertical-align: middle;
+  }
+  table.vg-legend-table tbody tr { cursor: pointer; }
+  table.vg-legend-table tbody tr:hover { background: var(--vgpanel2); }
+  table.vg-legend-table tbody tr.pinned { background: var(--vgaccent-soft); }
+  table.vg-legend-table tbody tr.reserved .vg-class-name { color: var(--muted); font-style: italic; }
+  table.vg-legend-table tbody tr:last-child td { border-bottom: none; }
+  .vg-num { font-family: ui-monospace, "SF Mono", "Cascadia Code", "Roboto Mono", Menlo, Consolas, monospace; font-variant-numeric: tabular-nums; color: var(--vg-ink-2); }
+  .vg-swatch-cell { display: flex; align-items: center; gap: 8px; }
+  .vg-swatch { width: 14px; height: 14px; flex: none; }
+  .vg-class-name { font-weight: 500; }
+  .vg-class-note { display: block; font-size: 0.7rem; color: var(--muted); font-weight: 400; }
+
+  .vg-reading-box {
+    padding: 14px 16px;
+    border-top: 1px solid var(--vgborder);
+    font-size: 0.78rem;
+    color: var(--vg-ink-2);
+    line-height: 1.6;
+  }
+  .vg-reading-box dl { margin: 8px 0 0; display: grid; grid-template-columns: auto 1fr; gap: 4px 10px; }
+  .vg-reading-box dt { font-family: ui-monospace, "SF Mono", "Cascadia Code", "Roboto Mono", Menlo, Consolas, monospace; color: var(--muted); }
+  .vg-reading-box dd { margin: 0; }
+
+  .vg-classify-body { padding: 12px 16px 14px; display: flex; flex-direction: column; gap: 8px; }
+  .vg-classify-label { font-size: 0.74rem; color: var(--muted); line-height: 1.4; }
+  .vg-classify-input {
+    font-size: 0.78rem; color: var(--vg-ink-2);
+    background: var(--vgpanel2); border: 1px solid var(--vgborder); border-radius: 3px;
+    padding: 6px 8px; width: 100%;
+  }
+  .vg-classify-btn {
+    font-family: ui-monospace, "SF Mono", "Cascadia Code", "Roboto Mono", Menlo, Consolas, monospace;
+    font-size: 0.76rem; font-weight: 600; letter-spacing: 0.02em;
+    background: var(--vgaccent); color: var(--vgaccent-ink);
+    border: none; border-radius: 3px; padding: 8px 10px; cursor: pointer;
+  }
+  .vg-classify-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+  .vg-classify-status { font-size: 0.76rem; color: var(--vg-ink-2); line-height: 1.5; min-height: 1.2em; }
+  .vg-classify-status.error { color: #e0685b; }
+  .vg-classify-ranking { margin: 0; padding: 0 0 0 1.1em; font-size: 0.78rem; line-height: 1.6; }
+  .vg-classify-ranking li.best { color: var(--vg-ink); font-weight: 600; }
+  .vg-classify-ranking .dist { font-family: ui-monospace, "SF Mono", "Cascadia Code", "Roboto Mono", Menlo, Consolas, monospace; color: var(--muted); }
+
+  .centroid-vec.unknown { stroke-width: 3; stroke-dasharray: 1 2; }
+
+  #vgTooltip {
+    position: fixed;
+    pointer-events: none;
+    background: var(--vg-ink);
+    color: var(--vg-surface);
+    font-family: ui-monospace, "SF Mono", "Cascadia Code", "Roboto Mono", Menlo, Consolas, monospace;
+    font-size: 11.5px;
+    line-height: 1.5;
+    padding: 6px 9px;
+    border-radius: 3px;
+    opacity: 0;
+    transform: translate(-50%, -100%);
+    transition: opacity 90ms ease;
+    z-index: 20;
+    white-space: nowrap;
+  }
+  #vgTooltip.show { opacity: 0.97; }
+  #vgTooltip b { font-weight: 600; }
+  #vgTooltip .tt-muted { opacity: 0.65; }
+
+  .vg-notes {
+    font-size: 0.76rem;
+    color: var(--muted);
+    line-height: 1.6;
+    padding-top: 4px;
+  }
+  .vg-notes a { color: var(--vg-ink-2); }
+  .visually-hidden {
+    position: absolute; width: 1px; height: 1px; overflow: hidden;
+    clip: rect(0 0 0 0); white-space: nowrap;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .vg-pt { transition: none; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div>
+    <h1>Odor Chamber Sensor Dashboard</h1>
+    <div class="sub">MQ137 (NH3) &middot; MQ138 (VOC) &middot; TGS2620 &middot; BME688 (when available)</div>
+  </div>
+  <span class="badge" id="modeBadge">No device connected</span>
+</header>
+
+<nav class="tabbar">
+  <button class="tabbtn active" data-tab="sensors">Live Sensors</button>
+  <button class="tabbtn" data-tab="vector">Odour Vector Graph</button>
+</nav>
+
+<div id="viewSensors" class="tabview">
+
+<div id="unsupportedNotice" style="display:none" class="unsupported">
+  <h2>Web Serial isn't available in this browser</h2>
+  <p class="hint">This dashboard connects directly to the Arduino over USB using the Web Serial API,
+  which is only implemented in Chrome, Edge, and other Chromium-based desktop browsers, over a secure
+  context (a normal https site, or an http/file page opened on this same computer).
+  Open this file in Chrome or Edge to connect to real hardware.</p>
+</div>
+
+<div class="layout" id="mainLayout">
+
+  <!-- LEFT PANEL -->
+  <div>
+    <div class="card">
+      <h2>Connection</h2>
+      <div class="status-line"><span class="status-dot" id="connDot"></span><span id="connText">Disconnected</span></div>
+      <label for="baudSelect">Baud rate</label>
+      <select id="baudSelect">
+        <option value="9600">9600</option>
+        <option value="57600">57600</option>
+        <option value="115200" selected>115200</option>
+        <option value="230400">230400</option>
+        <option value="460800">460800</option>
+        <option value="921600">921600</option>
+      </select>
+      <div class="row">
+        <button class="primary" id="connectBtn">Connect</button>
+        <button class="danger" id="disconnectBtn" disabled>Disconnect</button>
+      </div>
+      <div class="hint" id="reconnectHint"></div>
+      <h2 style="margin-top:14px">Serial Monitor</h2>
+      <div id="serialMonitor"></div>
+    </div>
+
+    <div class="card">
+      <h2>Live Readings</h2>
+      <div class="readout-grid" id="readoutGrid">
+        <div class="readout"><div class="label">NH3 (MQ137)</div><div class="value dim" id="rMq137">&mdash;</div></div>
+        <div class="readout"><div class="label">VOC (MQ138)</div><div class="value dim" id="rMq138">&mdash;</div></div>
+        <div class="readout"><div class="label">TGS2620 Rs</div><div class="value dim" id="rTgs">&mdash;</div></div>
+        <div class="readout"><div class="label">Environment</div><div class="value dim" id="rEnv">&mdash;</div></div>
+      </div>
+      <div class="hint" id="baselineHint">Baseline (R0) locks in from the first 30s of a logging run.</div>
+    </div>
+
+    <div class="card">
+      <h2>Logging</h2>
+      <div id="startNamePanel">
+        <label for="csvNameInput">Name this CSV file</label>
+        <input type="text" id="csvNameInput" value="">
+        <div class="row">
+          <button class="primary" id="confirmStartBtn">Start</button>
+          <button id="cancelStartBtn">Cancel</button>
+        </div>
+      </div>
+      <div class="row">
+        <button class="primary" id="startBtn">Start Data Logging</button>
+        <button class="danger" id="stopBtn" disabled>Stop Data Logging</button>
+      </div>
+      <div class="row" style="margin-top:8px">
+        <input type="text" id="markerInput" placeholder="Event note (optional)">
+        <button id="markerBtn" style="flex:0 0 auto" disabled>Mark</button>
+      </div>
+      <div class="hint">Press Enter (while not typing in a field) to drop a quick marker during logging.</div>
+      <div class="row" style="margin-top:10px">
+        <button id="downloadBtn" disabled>Download CSV</button>
+      </div>
+      <div class="hint" id="saveModeHint"></div>
+      <div class="marker-list" id="markerList"></div>
+    </div>
+
+    <div class="card">
+      <h2>Baseline (NH3 ppm)</h2>
+      <div class="hint" id="baselineStatus">Auto-detects from the median voltage over the first 30s of a run (same method as voltage_to_ppm.py).</div>
+      <label for="baselineOverride">Manual override (V) &mdash; optional</label>
+      <div class="row">
+        <input type="number" step="0.0001" id="baselineOverride" placeholder="e.g. 0.842">
+        <button id="applyBaselineBtn" style="flex:0 0 auto">Apply</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- RIGHT PANEL -->
+  <div>
+    <div class="chart-card">
+      <div class="chart-top">
+        <div class="chart-title">
+          <span id="chartFileName" class="fname">No file &mdash; live preview</span>
+        </div>
+        <div class="chart-controls">
+          <select id="windowSelect">
+            <option value="all">All</option>
+            <option value="60">Last 60s</option>
+            <option value="300">Last 5m</option>
+          </select>
+        </div>
+      </div>
+      <div id="panelsContainer"></div>
+    </div>
+  </div>
+
+</div>
+
+</div><!-- /viewSensors -->
+
+<div id="viewVector" class="tabview" hidden>
+
+  <div class="vg-page">
+
+    <div class="vg-disclaimer">
+      <span aria-hidden="true">&#9888;</span>
+      <span><b>Real data, small N.</b> Each point is one genuinely distinct BME688 heater-profile sweep (10 gas-resistance steps), taken from the settled tail of a real calibration run - 17-19 sweeps per class. That's enough to see whether these compounds separate at all, not enough to call this a validated classifier. Treat tight clustering as encouraging, not conclusive, until you've run repeat sessions per compound.</span>
+    </div>
+
+    <div class="vg-disclaimer reserve">
+      <span aria-hidden="true">&#9711;</span>
+      <span><b>Esters</b> and <b>Sulfides</b> are reserved for future runs — no exemplar compound has been cycled for either yet, so their positions below (dashed vectors) are placeholders, not real or synthetic data.</span>
+    </div>
+
+    <div class="vg-layout">
+
+      <section class="vg-panel">
+        <div class="vg-panel-head">
+          <span class="vg-panel-title">Latent vector plot</span>
+          <span class="vg-panel-sub">radius = intensity &middot; angle = direction &middot; color/shape = class</span>
+        </div>
+        <div class="vg-plot-wrap">
+          <svg id="plot" viewBox="0 0 640 640" role="img" aria-labelledby="plotTitle plotDesc">
+            <title id="plotTitle">Odour vector plot</title>
+            <desc id="plotDesc">Polar scatter of real BME688 heater-profile sweeps across six calibrated odour classes, plotted by PC2/PC3 magnitude and angle of the log-ratio gas-resistance profile, with class centroids shown as bold vectors from the origin.</desc>
+          </svg>
+        </div>
+        <div id="live" class="visually-hidden" aria-live="polite"></div>
+      </section>
+
+      <aside style="display:flex; flex-direction:column; gap:20px;">
+        <section class="vg-panel">
+          <div class="vg-panel-head">
+            <span class="vg-panel-title">Classes</span>
+            <span class="vg-panel-sub">click to isolate</span>
+          </div>
+          <table class="vg-legend-table" id="legendTable">
+            <caption>Class centroids: name, sample count, vector magnitude, vector angle</caption>
+            <thead>
+              <tr><th>Class</th><th>N</th><th>Mag.</th><th>Angle</th></tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+          <div class="vg-legend-foot">Hover a row to highlight its points on the plot. Click to pin the isolation; click again to release.</div>
+        </section>
+
+        <section class="vg-panel" id="vgClassifyPanel">
+          <div class="vg-panel-head">
+            <span class="vg-panel-title">Classify a sample</span>
+          </div>
+          <div class="vg-classify-body">
+            <label class="vg-classify-label" for="vgClassifyFile">CSV from a logged run (same schema as the Live Sensors tab)</label>
+            <input type="file" id="vgClassifyFile" accept=".csv" class="vg-classify-input">
+            <button id="vgClassifyBtn" class="vg-classify-btn" disabled>Project onto plot</button>
+            <div id="vgClassifyStatus" class="vg-classify-status"></div>
+            <ol id="vgClassifyRanking" class="vg-classify-ranking"></ol>
+          </div>
+        </section>
+
+        <section class="vg-panel vg-reading-box">
+          <span class="vg-panel-title">Reading this plot</span>
+          <dl>
+            <dt>Radius</dt><dd>Vector magnitude — an intensity-like score in latent space, not a calibrated concentration.</dd>
+            <dt>Angle</dt><dd>Direction in latent space — samples near the same angle smell more alike to the model.</dd>
+            <dt>Marker</dt><dd>Color + shape both carry class identity, redundantly, for colorblind-safe reading.</dd>
+            <dt>Bold vector</dt><dd>Each class's centroid — the average direction/intensity for that compound. Dashed = reserved, no exemplar yet.</dd>
+          </dl>
+        </section>
+      </aside>
+
+    </div>
+
+    <div class="vg-mono" style="font-size:0.72rem; text-align:right; color:var(--muted); margin-top:-8px;" id="countSummary">— samples &middot; — classes</div>
+
+    <footer class="vg-notes">
+      Source: six real calibration runs (clean air, ammonia, acetic acid, linalyl acetate, thyme oil, rosewater).
+      Method: for each run, dropped rows where the BME688's 10-step gas-resistance vector was just a repeated
+      cached value (not a new sweep) &middot; took each run's own first 15% of sweeps as its personal baseline &middot;
+      log<sub>10</sub>-ratioed the last 35% of sweeps against that baseline &middot; standardized and ran PCA across
+      all six classes pooled together. <b>PC1 (98% of variance) was excluded</b> — it tracks overall response
+      magnitude, which mostly reflects how far each run's tail window was into its exposure ramp, not compound
+      identity. <b>PC2 and PC3</b> (the plotted x/y here) capture the <i>relative shape</i> across the 10 heater
+      steps instead — the qualitative fingerprint distinguishing compounds, independent of intensity.
+      To add a class: re-run this same pipeline against a new CSV and paste the resulting points into
+      <span class="vg-mono">SAMPLES</span>/<span class="vg-mono">CENTROIDS</span> below.
+    </footer>
+
+  </div>
+
+  <div id="vgTooltip" role="presentation"></div>
+
+</div><!-- /viewVector -->
+
+<script>
+document.querySelectorAll(".tabbtn").forEach(function (btn) {
+  btn.addEventListener("click", function () {
+    document.querySelectorAll(".tabbtn").forEach(function (b) { b.classList.remove("active"); });
+    btn.classList.add("active");
+    const showSensors = btn.dataset.tab === "sensors";
+    document.getElementById("viewSensors").hidden = !showSensors;
+    document.getElementById("viewVector").hidden = showSensors;
+    // Canvases measured their container while it may have been hidden (0
+    // width) - force a reflow now that it's visible again.
+    if (showSensors && window.__redrawSensorPanels) window.__redrawSensorPanels();
+  });
+});
+</script>
+
+<script>
+(function () {
+  "use strict";
+
+  // ---------------------------------------------------------------------
+  // Class metadata - color/shape/note per class. Esters and Sulfides have
+  // no exemplar compound cycled yet, so they're reserved: a fixed dashed
+  // placeholder vector, no point cloud.
+  // ---------------------------------------------------------------------
+  var CLASS_META = {
+    "Clean air":         { varName: "--c-normal",   shape: "circle" },
+    "Ammonia":           { varName: "--c-nh3",      shape: "square",      note: "NH₃, inorganic base" },
+    "Organic acids":     { varName: "--c-ethanoic", shape: "cross",       note: "acetic acid" },
+    "Esters":            { varName: "--c-ethyl",    shape: "diamond",     note: "reserved — no exemplar yet", reserved: true },
+    "Linalyl acetate":   { varName: "--c-linalyl",  shape: "triangle",    note: "floral ester, lavender" },
+    "Phenolics":         { varName: "--c-phenolic", shape: "hexagon",     note: "thymol/carvacrol, thyme oil" },
+    "Terpene alcohols":  { varName: "--c-terpalc",  shape: "triangleInv", note: "geraniol/citronellol, rosewater" },
+    "Sulfides":          { varName: "--c-sulfide",  shape: "star",        note: "reserved — no exemplar yet", reserved: true }
+  };
+  var CLASS_ORDER = ["Clean air", "Ammonia", "Organic acids", "Esters", "Linalyl acetate", "Phenolics", "Terpene alcohols", "Sulfides"];
+
+  // ---------------------------------------------------------------------
+  // Real data. Each sample is one genuinely distinct BME688 heater-profile
+  // sweep (10 gas-resistance steps), pulled from the settled tail of a real
+  // calibration run, log-ratioed against that same run's own pre-exposure
+  // baseline, then projected onto PC2/PC3 of a PCA fit across all six
+  // classes pooled together (PC1 excluded - see the footer note below for
+  // why). Generated offline from the six calibration CSVs; see the footer
+  // for the exact method if you want to regenerate this with a new class.
+  // ---------------------------------------------------------------------
+  var SAMPLES = [{"id":"CLEA-1","cls":"Clean air","x":0.106,"y":-0.066,"m":0.124,"a":328.21},{"id":"CLEA-2","cls":"Clean air","x":0.101,"y":-0.083,"m":0.13,"a":320.52},{"id":"CLEA-3","cls":"Clean air","x":0.095,"y":-0.074,"m":0.12,"a":321.9},{"id":"CLEA-4","cls":"Clean air","x":0.09,"y":-0.086,"m":0.125,"a":316.33},{"id":"CLEA-5","cls":"Clean air","x":0.089,"y":-0.085,"m":0.123,"a":316.54},{"id":"CLEA-6","cls":"Clean air","x":0.088,"y":-0.083,"m":0.121,"a":316.43},{"id":"CLEA-7","cls":"Clean air","x":0.085,"y":-0.088,"m":0.122,"a":314.1},{"id":"CLEA-8","cls":"Clean air","x":0.088,"y":-0.083,"m":0.121,"a":316.53},{"id":"CLEA-9","cls":"Clean air","x":0.097,"y":-0.081,"m":0.126,"a":320.06},{"id":"CLEA-10","cls":"Clean air","x":0.087,"y":-0.084,"m":0.121,"a":315.96},{"id":"CLEA-11","cls":"Clean air","x":0.084,"y":-0.084,"m":0.119,"a":314.89},{"id":"CLEA-12","cls":"Clean air","x":0.092,"y":-0.089,"m":0.128,"a":315.92},{"id":"CLEA-13","cls":"Clean air","x":0.074,"y":-0.089,"m":0.115,"a":309.77},{"id":"CLEA-14","cls":"Clean air","x":0.079,"y":-0.09,"m":0.119,"a":311.32},{"id":"CLEA-15","cls":"Clean air","x":0.089,"y":-0.094,"m":0.129,"a":313.27},{"id":"CLEA-16","cls":"Clean air","x":0.093,"y":-0.096,"m":0.133,"a":314.05},{"id":"CLEA-17","cls":"Clean air","x":0.075,"y":-0.099,"m":0.124,"a":307.22},{"id":"CLEA-18","cls":"Clean air","x":0.07,"y":-0.091,"m":0.114,"a":307.47},{"id":"CLEA-19","cls":"Clean air","x":0.077,"y":-0.109,"m":0.133,"a":305.21},{"id":"AMMO-1","cls":"Ammonia","x":-0.518,"y":-0.106,"m":0.528,"a":191.55},{"id":"AMMO-2","cls":"Ammonia","x":-0.517,"y":-0.095,"m":0.526,"a":190.46},{"id":"AMMO-3","cls":"Ammonia","x":-0.514,"y":-0.087,"m":0.521,"a":189.61},{"id":"AMMO-4","cls":"Ammonia","x":-0.505,"y":-0.072,"m":0.511,"a":188.15},{"id":"AMMO-5","cls":"Ammonia","x":-0.501,"y":-0.072,"m":0.506,"a":188.19},{"id":"AMMO-6","cls":"Ammonia","x":-0.498,"y":-0.069,"m":0.503,"a":187.87},{"id":"AMMO-7","cls":"Ammonia","x":-0.504,"y":-0.064,"m":0.508,"a":187.24},{"id":"AMMO-8","cls":"Ammonia","x":-0.5,"y":-0.057,"m":0.503,"a":186.46},{"id":"AMMO-9","cls":"Ammonia","x":-0.493,"y":-0.049,"m":0.495,"a":185.64},{"id":"AMMO-10","cls":"Ammonia","x":-0.495,"y":-0.048,"m":0.498,"a":185.51},{"id":"AMMO-11","cls":"Ammonia","x":-0.491,"y":-0.045,"m":0.493,"a":185.28},{"id":"AMMO-12","cls":"Ammonia","x":-0.481,"y":-0.035,"m":0.483,"a":184.19},{"id":"AMMO-13","cls":"Ammonia","x":-0.492,"y":-0.034,"m":0.493,"a":184.01},{"id":"AMMO-14","cls":"Ammonia","x":-0.476,"y":-0.03,"m":0.477,"a":183.63},{"id":"AMMO-15","cls":"Ammonia","x":-0.479,"y":-0.02,"m":0.48,"a":182.43},{"id":"AMMO-16","cls":"Ammonia","x":-0.478,"y":-0.021,"m":0.478,"a":182.56},{"id":"AMMO-17","cls":"Ammonia","x":-0.476,"y":-0.021,"m":0.476,"a":182.53},{"id":"AMMO-18","cls":"Ammonia","x":-0.472,"y":-0.005,"m":0.472,"a":180.62},{"id":"ORGA-1","cls":"Organic acids","x":-0.549,"y":-0.1,"m":0.558,"a":190.38},{"id":"ORGA-2","cls":"Organic acids","x":-0.548,"y":-0.091,"m":0.556,"a":189.43},{"id":"ORGA-3","cls":"Organic acids","x":-0.553,"y":-0.103,"m":0.563,"a":190.51},{"id":"ORGA-4","cls":"Organic acids","x":-0.555,"y":-0.098,"m":0.564,"a":190.02},{"id":"ORGA-5","cls":"Organic acids","x":-0.563,"y":-0.101,"m":0.572,"a":190.21},{"id":"ORGA-6","cls":"Organic acids","x":-0.566,"y":-0.093,"m":0.573,"a":189.33},{"id":"ORGA-7","cls":"Organic acids","x":-0.565,"y":-0.091,"m":0.572,"a":189.16},{"id":"ORGA-8","cls":"Organic acids","x":-0.577,"y":-0.098,"m":0.585,"a":189.68},{"id":"ORGA-9","cls":"Organic acids","x":-0.569,"y":-0.094,"m":0.576,"a":189.34},{"id":"ORGA-10","cls":"Organic acids","x":-0.571,"y":-0.086,"m":0.577,"a":188.56},{"id":"ORGA-11","cls":"Organic acids","x":-0.573,"y":-0.088,"m":0.58,"a":188.71},{"id":"ORGA-12","cls":"Organic acids","x":-0.577,"y":-0.098,"m":0.585,"a":189.63},{"id":"ORGA-13","cls":"Organic acids","x":-0.58,"y":-0.087,"m":0.586,"a":188.54},{"id":"ORGA-14","cls":"Organic acids","x":-0.576,"y":-0.104,"m":0.585,"a":190.19},{"id":"ORGA-15","cls":"Organic acids","x":-0.57,"y":-0.111,"m":0.581,"a":191.02},{"id":"ORGA-16","cls":"Organic acids","x":-0.586,"y":-0.108,"m":0.596,"a":190.41},{"id":"ORGA-17","cls":"Organic acids","x":-0.583,"y":-0.104,"m":0.593,"a":190.1},{"id":"LINA-1","cls":"Linalyl acetate","x":0.682,"y":-0.105,"m":0.69,"a":351.25},{"id":"LINA-2","cls":"Linalyl acetate","x":0.681,"y":-0.103,"m":0.689,"a":351.43},{"id":"LINA-3","cls":"Linalyl acetate","x":0.693,"y":-0.101,"m":0.701,"a":351.67},{"id":"LINA-4","cls":"Linalyl acetate","x":0.69,"y":-0.104,"m":0.698,"a":351.41},{"id":"LINA-5","cls":"Linalyl acetate","x":0.701,"y":-0.098,"m":0.708,"a":352.03},{"id":"LINA-6","cls":"Linalyl acetate","x":0.695,"y":-0.099,"m":0.702,"a":351.92},{"id":"LINA-7","cls":"Linalyl acetate","x":0.696,"y":-0.1,"m":0.703,"a":351.82},{"id":"LINA-8","cls":"Linalyl acetate","x":0.696,"y":-0.102,"m":0.703,"a":351.63},{"id":"LINA-9","cls":"Linalyl acetate","x":0.697,"y":-0.094,"m":0.703,"a":352.34},{"id":"LINA-10","cls":"Linalyl acetate","x":0.713,"y":-0.093,"m":0.719,"a":352.59},{"id":"LINA-11","cls":"Linalyl acetate","x":0.699,"y":-0.087,"m":0.705,"a":352.93},{"id":"LINA-12","cls":"Linalyl acetate","x":0.702,"y":-0.089,"m":0.707,"a":352.81},{"id":"LINA-13","cls":"Linalyl acetate","x":0.706,"y":-0.088,"m":0.712,"a":352.92},{"id":"LINA-14","cls":"Linalyl acetate","x":0.704,"y":-0.089,"m":0.709,"a":352.82},{"id":"LINA-15","cls":"Linalyl acetate","x":0.698,"y":-0.09,"m":0.704,"a":352.63},{"id":"LINA-16","cls":"Linalyl acetate","x":0.696,"y":-0.079,"m":0.7,"a":353.54},{"id":"LINA-17","cls":"Linalyl acetate","x":0.691,"y":-0.087,"m":0.696,"a":352.82},{"id":"LINA-18","cls":"Linalyl acetate","x":0.695,"y":-0.079,"m":0.7,"a":353.53},{"id":"LINA-19","cls":"Linalyl acetate","x":0.69,"y":-0.082,"m":0.695,"a":353.19},{"id":"PHEN-1","cls":"Phenolics","x":0.243,"y":-0.025,"m":0.244,"a":354.2},{"id":"PHEN-2","cls":"Phenolics","x":0.24,"y":-0.028,"m":0.242,"a":353.41},{"id":"PHEN-3","cls":"Phenolics","x":0.235,"y":-0.021,"m":0.236,"a":354.92},{"id":"PHEN-4","cls":"Phenolics","x":0.232,"y":-0.025,"m":0.234,"a":353.91},{"id":"PHEN-5","cls":"Phenolics","x":0.225,"y":-0.004,"m":0.225,"a":358.93},{"id":"PHEN-6","cls":"Phenolics","x":0.223,"y":-0.006,"m":0.223,"a":358.34},{"id":"PHEN-7","cls":"Phenolics","x":0.227,"y":-0.002,"m":0.227,"a":359.56},{"id":"PHEN-8","cls":"Phenolics","x":0.227,"y":-0.01,"m":0.227,"a":357.54},{"id":"PHEN-9","cls":"Phenolics","x":0.221,"y":-0.001,"m":0.221,"a":359.63},{"id":"PHEN-10","cls":"Phenolics","x":0.22,"y":-0.006,"m":0.22,"a":358.56},{"id":"PHEN-11","cls":"Phenolics","x":0.219,"y":0.001,"m":0.219,"a":0.21},{"id":"PHEN-12","cls":"Phenolics","x":0.207,"y":-0.001,"m":0.207,"a":359.64},{"id":"PHEN-13","cls":"Phenolics","x":0.224,"y":-0.002,"m":0.224,"a":359.39},{"id":"PHEN-14","cls":"Phenolics","x":0.195,"y":0.002,"m":0.195,"a":0.58},{"id":"PHEN-15","cls":"Phenolics","x":0.192,"y":0.002,"m":0.192,"a":0.53},{"id":"PHEN-16","cls":"Phenolics","x":0.182,"y":0.015,"m":0.183,"a":4.62},{"id":"PHEN-17","cls":"Phenolics","x":0.183,"y":0.004,"m":0.183,"a":1.21},{"id":"TERP-1","cls":"Terpene alcohols","x":-0.006,"y":0.314,"m":0.314,"a":91.06},{"id":"TERP-2","cls":"Terpene alcohols","x":-0.003,"y":0.318,"m":0.318,"a":90.52},{"id":"TERP-3","cls":"Terpene alcohols","x":-0.006,"y":0.32,"m":0.32,"a":91.12},{"id":"TERP-4","cls":"Terpene alcohols","x":-0.01,"y":0.329,"m":0.329,"a":91.72},{"id":"TERP-5","cls":"Terpene alcohols","x":-0.0,"y":0.319,"m":0.319,"a":90.08},{"id":"TERP-6","cls":"Terpene alcohols","x":0.003,"y":0.322,"m":0.322,"a":89.55},{"id":"TERP-7","cls":"Terpene alcohols","x":0.001,"y":0.304,"m":0.304,"a":89.76},{"id":"TERP-8","cls":"Terpene alcohols","x":-0.009,"y":0.317,"m":0.317,"a":91.54},{"id":"TERP-9","cls":"Terpene alcohols","x":-0.003,"y":0.324,"m":0.324,"a":90.54},{"id":"TERP-10","cls":"Terpene alcohols","x":0.0,"y":0.324,"m":0.324,"a":89.95},{"id":"TERP-11","cls":"Terpene alcohols","x":0.002,"y":0.324,"m":0.324,"a":89.61},{"id":"TERP-12","cls":"Terpene alcohols","x":0.001,"y":0.326,"m":0.326,"a":89.8},{"id":"TERP-13","cls":"Terpene alcohols","x":-0.006,"y":0.317,"m":0.317,"a":91.16},{"id":"TERP-14","cls":"Terpene alcohols","x":0.008,"y":0.325,"m":0.325,"a":88.63},{"id":"TERP-15","cls":"Terpene alcohols","x":0.001,"y":0.328,"m":0.328,"a":89.9},{"id":"TERP-16","cls":"Terpene alcohols","x":-0.005,"y":0.325,"m":0.326,"a":90.85},{"id":"TERP-17","cls":"Terpene alcohols","x":0.002,"y":0.329,"m":0.329,"a":89.61},{"id":"TERP-18","cls":"Terpene alcohols","x":0.001,"y":0.322,"m":0.322,"a":89.89},{"id":"TERP-19","cls":"Terpene alcohols","x":0.005,"y":0.328,"m":0.328,"a":89.16}];
+
+  var CENTROIDS = [
+    {"cls":"Clean air","x":0.087,"y":-0.087,"m":0.123,"a":315.05,"n":19},
+    {"cls":"Ammonia","x":-0.494,"y":-0.052,"m":0.497,"a":185.98,"n":18},
+    {"cls":"Organic acids","x":-0.568,"y":-0.097,"m":0.577,"a":189.72,"n":17},
+    {"cls":"Linalyl acetate","x":0.696,"y":-0.093,"m":0.702,"a":352.38,"n":19},
+    {"cls":"Phenolics","x":0.217,"y":-0.006,"m":0.218,"a":358.33,"n":17},
+    {"cls":"Terpene alcohols","x":-0.001,"y":0.322,"m":0.322,"a":90.23,"n":19},
+    // Reserved - no exemplar compound cycled yet; x/y filled in below from
+    // angle/mag, placed clear of the real centroids purely for layout.
+    {"cls":"Esters", "x":0, "y":0, "m":0.45, "a":230, "reserved": true},
+    {"cls":"Sulfides", "x":0, "y":0, "m":0.40, "a":135, "reserved": true}
+  ];
+  CENTROIDS.forEach(function (c) {
+    if (c.reserved) {
+      var rad = c.a * Math.PI / 180;
+      c.x = c.m * Math.cos(rad);
+      c.y = c.m * Math.sin(rad);
+    }
+  });
+
+  document.getElementById("countSummary").textContent =
+    SAMPLES.length + " samples · " + CLASS_ORDER.length + " classes";
+
+  var vgSvg = document.getElementById("plot");
+  var SVGNS = "http://www.w3.org/2000/svg";
+  var VG_CX = 320, VG_CY = 320;
+  var VG_MAX_RING = 0.8; // real data tops out around 0.72 (Linalyl acetate) - was 10 for the old synthetic scale
+  var VG_SCALE = 250 / VG_MAX_RING; // px per latent unit
+
+  function vgEl(name, attrs) {
+    var e = document.createElementNS(SVGNS, name);
+    for (var k in attrs) e.setAttribute(k, attrs[k]);
+    return e;
+  }
+  function vgToScreen(x, y) {
+    return { sx: VG_CX + x * VG_SCALE, sy: VG_CY - y * VG_SCALE };
+  }
+
+  // Regular n-gon point string, radius r, first vertex rotated `startDeg`
+  // clockwise from straight up. Used for hexagon/star so the geometry is
+  // computed, not hand-typed magic-number path data.
+  function ngonPoints(n, r, startDeg) {
+    var pts = [];
+    for (var i = 0; i < n; i++) {
+      var a = (startDeg + i * (360 / n) - 90) * Math.PI / 180;
+      pts.push((r * Math.cos(a)).toFixed(2) + "," + (r * Math.sin(a)).toFixed(2));
+    }
+    return pts.join(" ");
+  }
+  function starPoints(r, rInner, startDeg) {
+    var pts = [];
+    for (var i = 0; i < 10; i++) {
+      var rad = i % 2 === 0 ? r : rInner;
+      var a = (startDeg + i * 36 - 90) * Math.PI / 180;
+      pts.push((rad * Math.cos(a)).toFixed(2) + "," + (rad * Math.sin(a)).toFixed(2));
+    }
+    return pts.join(" ");
+  }
+
+  function vgShapeEl(shape, r) {
+    if (shape === "circle") return vgEl("circle", { r: r });
+    if (shape === "square") return vgEl("rect", { x: -r * 0.88, y: -r * 0.88, width: r * 1.76, height: r * 1.76 });
+    if (shape === "triangle") return vgEl("polygon", { points: "0,-" + (r * 1.15) + " " + (r * 1.05) + "," + (r * 0.85) + " -" + (r * 1.05) + "," + (r * 0.85) });
+    if (shape === "triangleInv") return vgEl("polygon", { points: "0," + (r * 1.15) + " " + (r * 1.05) + ",-" + (r * 0.85) + " -" + (r * 1.05) + ",-" + (r * 0.85) });
+    if (shape === "diamond") return vgEl("polygon", { points: "0,-" + (r * 1.2) + " " + (r * 1.2) + ",0 0," + (r * 1.2) + " -" + (r * 1.2) + ",0" });
+    if (shape === "hexagon") return vgEl("polygon", { points: ngonPoints(6, r * 1.1, 0) });
+    if (shape === "star") return vgEl("polygon", { points: starPoints(r * 1.25, r * 0.48, 0) });
+    if (shape === "cross") {
+      var a = r * 0.9, b = r * 0.32;
+      return vgEl("path", { d:
+        "M " + (-b) + " " + (-a) + " H " + b + " V " + (-b) + " H " + a + " V " + b +
+        " H " + b + " V " + a + " H " + (-b) + " V " + b + " H " + (-a) + " V " + (-b) + " H " + (-b) + " Z" });
+    }
+  }
+
+  // --- static grid ---
+  var vgGridLayer = vgEl("g", { "aria-hidden": "true" });
+  [0.2, 0.4, 0.6, 0.8].forEach(function (m) {
+    vgGridLayer.appendChild(vgEl("circle", { class: "grid-line", cx: VG_CX, cy: VG_CY, r: m * VG_SCALE }));
+    var lab = vgEl("text", { class: "ring-label", x: VG_CX + 4, y: VG_CY - m * VG_SCALE - 3 });
+    lab.textContent = m;
+    vgGridLayer.appendChild(lab);
+  });
+  for (var vgDeg = 0; vgDeg < 360; vgDeg += 45) {
+    var rad0 = vgDeg * Math.PI / 180;
+    var p0 = vgToScreen(VG_MAX_RING * Math.cos(rad0), VG_MAX_RING * Math.sin(rad0));
+    vgGridLayer.appendChild(vgEl("line", { class: "axis-line", x1: VG_CX, y1: VG_CY, x2: p0.sx, y2: p0.sy }));
+  }
+  [[0, "0°", 8, 4], [45, "45°", 6, -2], [90, "90°", 4, -8], [135, "135°", -26, -2],
+   [180, "180°", -30, 4], [225, "225°", -26, 12], [270, "270°", 4, 16], [315, "315°", 6, 12]].forEach(function (t) {
+    var rad = t[0] * Math.PI / 180;
+    var p = vgToScreen((VG_MAX_RING + 0.35) * Math.cos(rad), (VG_MAX_RING + 0.35) * Math.sin(rad));
+    var lab = vgEl("text", { class: "spoke-label", x: p.sx + t[2], y: p.sy + t[3] });
+    lab.textContent = t[1];
+    vgGridLayer.appendChild(lab);
+  });
+  vgSvg.appendChild(vgGridLayer);
+
+  // --- sample cloud ---
+  var vgCloud = vgEl("g");
+  SAMPLES.forEach(function (s) {
+    var meta = CLASS_META[s.cls];
+    var pos = vgToScreen(s.x, s.y);
+    var g = vgEl("g", { class: "vg-pt", "data-cls": s.cls, transform: "translate(" + pos.sx.toFixed(2) + "," + pos.sy.toFixed(2) + ")" });
+    var mark = vgShapeEl(meta.shape, 4);
+    mark.setAttribute("fill", "var(" + meta.varName + ")");
+    mark.setAttribute("opacity", "0.55");
+    var hit = vgEl("circle", { class: "vg-hit", r: 9 });
+    hit.addEventListener("pointerenter", function (ev) { vgShowTip(ev, s.id + " &middot; " + s.cls, "mag " + s.m.toFixed(2) + " &middot; angle " + s.a.toFixed(1) + "°"); });
+    hit.addEventListener("pointermove", vgMoveTip);
+    hit.addEventListener("pointerleave", vgHideTip);
+    g.appendChild(mark);
+    g.appendChild(hit);
+    vgCloud.appendChild(g);
+  });
+  vgSvg.appendChild(vgCloud);
+
+  // --- centroids ---
+  var vgCentroidLayer = vgEl("g");
+  var vgLiveRegion = document.getElementById("live");
+  CENTROIDS.sort(function (a, b) { return CLASS_ORDER.indexOf(a.cls) - CLASS_ORDER.indexOf(b.cls); });
+  CENTROIDS.forEach(function (c) {
+    var meta = CLASS_META[c.cls];
+    var n = SAMPLES.filter(function (s) { return s.cls === c.cls; }).length;
+    var pos = vgToScreen(c.x, c.y);
+    var color = "var(" + meta.varName + ")";
+
+    var vec = vgEl("line", { class: "centroid-vec" + (c.reserved ? " reserved" : ""), x1: VG_CX, y1: VG_CY, x2: pos.sx, y2: pos.sy, stroke: color });
+    vgCentroidLayer.appendChild(vec);
+
+    if (!c.reserved) {
+      var g = vgEl("g", { class: "vg-pt", "data-cls": c.cls, transform: "translate(" + pos.sx.toFixed(2) + "," + pos.sy.toFixed(2) + ")" });
+      var mark = vgShapeEl(meta.shape, 7.5);
+      mark.setAttribute("class", "centroid-mark");
+      mark.setAttribute("fill", color);
+      mark.setAttribute("tabindex", "0");
+      mark.setAttribute("role", "img");
+      var ttHtml = c.cls + " centroid — mag " + c.m.toFixed(2) + ", angle " + c.a.toFixed(1) + "°, n=" + n;
+      mark.setAttribute("aria-label", ttHtml);
+      mark.addEventListener("pointerenter", function (ev) { vgShowTip(ev, c.cls + " <span class=\"tt-muted\">centroid</span>", "mag " + c.m.toFixed(2) + " &middot; angle " + c.a.toFixed(1) + "° &middot; n=" + n); });
+      mark.addEventListener("pointermove", vgMoveTip);
+      mark.addEventListener("pointerleave", vgHideTip);
+      mark.addEventListener("focus", function () { vgLiveRegion.textContent = ttHtml; });
+      g.appendChild(mark);
+      vgCentroidLayer.appendChild(g);
+    }
+
+    var lx = pos.sx + (pos.sx >= VG_CX ? 10 : -10);
+    var ly = pos.sy + (pos.sy >= VG_CY ? 14 : -8);
+    var label = vgEl("text", {
+      class: "centroid-label", x: lx, y: ly,
+      "text-anchor": pos.sx >= VG_CX ? "start" : "end", fill: c.reserved ? "var(--muted)" : "var(--vg-ink)"
+    });
+    label.textContent = c.cls + (c.reserved ? " (reserved)" : "");
+    vgCentroidLayer.appendChild(label);
+    var sub = vgEl("text", {
+      class: "centroid-label-sub", x: lx, y: ly + 12,
+      "text-anchor": pos.sx >= VG_CX ? "start" : "end"
+    });
+    sub.textContent = c.reserved ? "no exemplar yet" : c.m.toFixed(2) + " @ " + c.a.toFixed(0) + "°";
+    vgCentroidLayer.appendChild(sub);
+  });
+  vgSvg.appendChild(vgCentroidLayer);
+
+  // --- tooltip ---
+  var vgTip = document.getElementById("vgTooltip");
+  function vgShowTip(ev, line1, line2) {
+    vgTip.innerHTML = "<b>" + line1 + "</b><br>" + line2;
+    vgTip.classList.add("show");
+    vgMoveTip(ev);
+  }
+  function vgMoveTip(ev) {
+    vgTip.style.left = ev.clientX + "px";
+    vgTip.style.top = (ev.clientY - 12) + "px";
+  }
+  function vgHideTip() { vgTip.classList.remove("show"); }
+
+  // --- legend table + isolation ---
+  var vgTbody = document.querySelector("#legendTable tbody");
+  var vgPinned = null;
+
+  function vgApplyHighlight(cls) {
+    document.querySelectorAll(".vg-pt").forEach(function (n) {
+      n.classList.toggle("dim", !!cls && n.getAttribute("data-cls") !== cls);
+    });
+  }
+
+  CENTROIDS.forEach(function (c) {
+    var meta = CLASS_META[c.cls];
+    var n = SAMPLES.filter(function (s) { return s.cls === c.cls; }).length;
+    var tr = document.createElement("tr");
+    tr.setAttribute("data-cls", c.cls);
+    if (c.reserved) tr.classList.add("reserved");
+
+    var tdClass = document.createElement("td");
+    var wrap = document.createElement("span");
+    wrap.className = "vg-swatch-cell";
+    var sw = document.createElement("span");
+    sw.className = "vg-swatch";
+    sw.style.background = "var(" + meta.varName + ")";
+    sw.style.opacity = c.reserved ? "0.45" : "1";
+    sw.style.clipPath =
+      meta.shape === "circle" ? "circle(50%)" :
+      meta.shape === "square" ? "none" :
+      meta.shape === "triangle" ? "polygon(50% 0%, 100% 100%, 0% 100%)" :
+      meta.shape === "triangleInv" ? "polygon(0% 0%, 100% 0%, 50% 100%)" :
+      meta.shape === "diamond" ? "polygon(50% 0%, 100% 50%, 50% 100%, 0% 50%)" :
+      meta.shape === "hexagon" ? "polygon(25% 0%, 75% 0%, 100% 50%, 75% 100%, 25% 100%, 0% 50%)" :
+      meta.shape === "star" ? "polygon(50% 0%,61% 35%,98% 35%,68% 57%,79% 91%,50% 70%,21% 91%,32% 57%,2% 35%,39% 35%)" :
+      "polygon(35% 0%,65% 0%,65% 35%,100% 35%,100% 65%,65% 65%,65% 100%,35% 100%,35% 65%,0% 65%,0% 35%,35% 35%)";
+    var nameSpan = document.createElement("span");
+    nameSpan.className = "vg-class-name";
+    nameSpan.textContent = c.cls;
+    if (meta.note) {
+      var noteSpan = document.createElement("span");
+      noteSpan.className = "vg-class-note";
+      noteSpan.textContent = meta.note;
+      nameSpan.appendChild(noteSpan);
+    }
+    wrap.appendChild(sw);
+    wrap.appendChild(nameSpan);
+    tdClass.appendChild(wrap);
+
+    var tdN = document.createElement("td"); tdN.className = "vg-num"; tdN.textContent = c.reserved ? "—" : n;
+    var tdM = document.createElement("td"); tdM.className = "vg-num"; tdM.textContent = c.m.toFixed(2);
+    var tdA = document.createElement("td"); tdA.className = "vg-num"; tdA.textContent = c.a.toFixed(1) + "°";
+
+    tr.appendChild(tdClass); tr.appendChild(tdN); tr.appendChild(tdM); tr.appendChild(tdA);
+
+    tr.addEventListener("pointerenter", function () { if (!vgPinned) vgApplyHighlight(c.cls); });
+    tr.addEventListener("pointerleave", function () { if (!vgPinned) vgApplyHighlight(null); });
+    tr.addEventListener("click", function () {
+      if (vgPinned === c.cls) {
+        vgPinned = null;
+        tr.classList.remove("pinned");
+        vgApplyHighlight(null);
+      } else {
+        document.querySelectorAll("#legendTable tr").forEach(function (r) { r.classList.remove("pinned"); });
+        vgPinned = c.cls;
+        tr.classList.add("pinned");
+        vgApplyHighlight(c.cls);
+      }
+    });
+
+    vgTbody.appendChild(tr);
+  });
+
+  // ---------------------------------------------------------------------
+  // Classify a new sample: project an uploaded run onto the SAME fixed
+  // PC2/PC3 axes as the six known classes above, by re-applying the exact
+  // scaler and PCA parameters already fit on the training data. Never
+  // refits anything - PCA on a single new run in isolation would have no
+  // meaningful "directions of variance" to find.
+  // ---------------------------------------------------------------------
+  var SCALER_MEAN = [-0.376407, -0.639392, -0.672516, -0.743362, -0.572341, -0.570032, -0.568706, -0.400512, -0.38883, -0.384289];
+  var SCALER_SCALE = [0.231265, 0.403244, 0.430939, 0.466016, 0.377085, 0.38291, 0.38853, 0.255701, 0.244744, 0.238783];
+  var PC2_LOADINGS = [0.280609, 0.323618, 0.267744, 0.166862, -0.367604, -0.466737, -0.528616, -0.076415, 0.139487, 0.243502];
+  var PC3_LOADINGS = [0.110212, -0.180289, 0.096996, -0.755678, -0.174655, -0.070747, 0.03042, 0.475147, 0.285953, 0.175849];
+  var GAS_COL_NAMES = [0,1,2,3,4,5,6,7,8,9].map(function (i) { return "gas_" + i + "_ohm"; });
+  var VG_BASELINE_FRAC = 0.15, VG_EXPOSED_FRAC = 0.35;
+
+  function parseClassifyCsv(text) {
+    var lines = text.split(/\r?\n/).filter(function (l) { return l.length; });
+    if (!lines.length) throw new Error("Empty file.");
+    var header = lines[0].split(",").map(function (h) { return h.trim(); });
+    var idx = {};
+    header.forEach(function (h, i) { idx[h] = i; });
+    var missing = GAS_COL_NAMES.filter(function (c) { return !(c in idx); });
+    if (missing.length) throw new Error("Missing " + missing.join(", ") + " - this file wasn't logged with BME688 active (4-sensor mode).");
+    var rows = [];
+    for (var i = 1; i < lines.length; i++) {
+      var parts = lines[i].split(",");
+      if (parts.length < header.length) continue;
+      var vec = GAS_COL_NAMES.map(function (c) { return parseFloat(parts[idx[c]]); });
+      if (vec.some(function (v) { return isNaN(v); })) continue; // marker rows / blank gas cols
+      rows.push(vec);
+    }
+    return rows;
+  }
+
+  function dedupeConsecutive(rows) {
+    var out = [];
+    for (var i = 0; i < rows.length; i++) {
+      if (i === 0) { out.push(rows[i]); continue; }
+      var prev = rows[i - 1], cur = rows[i], changed = false;
+      for (var k = 0; k < cur.length; k++) { if (cur[k] !== prev[k]) { changed = true; break; } }
+      if (changed) out.push(cur);
+    }
+    return out;
+  }
+
+  function vgMedian(arr) {
+    var s = arr.slice().sort(function (a, b) { return a - b; });
+    return s[Math.floor(s.length / 2)];
+  }
+
+  // Mirrors the offline Python pipeline exactly: dedupe to real sweeps,
+  // this run's own first 15% as its baseline, last 35% as the settled
+  // exposure window, log-ratio, standardize (fixed params), project onto
+  // the fixed PC2/PC3 loadings.
+  function projectSample(rows) {
+    var deduped = dedupeConsecutive(rows);
+    if (deduped.length < 6) {
+      throw new Error("Only " + deduped.length + " distinct BME688 sweeps in this file - need more than that to split into a baseline and an exposed window.");
+    }
+    var baseN = Math.max(2, Math.floor(deduped.length * VG_BASELINE_FRAC));
+    var tailN = Math.max(2, Math.floor(deduped.length * VG_EXPOSED_FRAC));
+    var baselineRows = deduped.slice(0, baseN);
+    var exposedRows = deduped.slice(Math.max(0, deduped.length - tailN));
+    var baseline = GAS_COL_NAMES.map(function (_, k) { return vgMedian(baselineRows.map(function (r) { return r[k]; })); });
+
+    var points = exposedRows.map(function (r) {
+      var logratio = r.map(function (v, k) { return Math.log10(v / baseline[k]); });
+      var std = logratio.map(function (v, k) { return (v - SCALER_MEAN[k]) / SCALER_SCALE[k]; });
+      var x = 0, y = 0;
+      for (var k = 0; k < 10; k++) { x += std[k] * PC2_LOADINGS[k]; y += std[k] * PC3_LOADINGS[k]; }
+      return { x: x, y: y, m: Math.hypot(x, y), a: (Math.atan2(y, x) * 180 / Math.PI + 360) % 360 };
+    });
+    var cx = points.reduce(function (s, p) { return s + p.x; }, 0) / points.length;
+    var cy = points.reduce(function (s, p) { return s + p.y; }, 0) / points.length;
+    return { points: points, centroid: { x: cx, y: cy, m: Math.hypot(cx, cy), a: (Math.atan2(cy, cx) * 180 / Math.PI + 360) % 360 } };
+  }
+
+  var vgUnknownLayer = vgEl("g");
+  vgSvg.appendChild(vgUnknownLayer); // appended last -> paints on top of everything above
+
+  function clearUnknown() { vgUnknownLayer.innerHTML = ""; }
+
+  function renderUnknown(result, label) {
+    clearUnknown();
+    result.points.forEach(function (p) {
+      var pos = vgToScreen(p.x, p.y);
+      vgUnknownLayer.appendChild(vgEl("circle", {
+        cx: pos.sx, cy: pos.sy, r: 4.5, fill: "var(--c-unknown)", stroke: "var(--vg-ink)", "stroke-width": 1, opacity: 0.85
+      }));
+    });
+    var c = result.centroid;
+    var pos = vgToScreen(c.x, c.y);
+    vgUnknownLayer.appendChild(vgEl("line", {
+      class: "centroid-vec unknown", x1: VG_CX, y1: VG_CY, x2: pos.sx, y2: pos.sy, stroke: "var(--c-unknown)"
+    }));
+    vgUnknownLayer.appendChild(vgEl("circle", {
+      cx: pos.sx, cy: pos.sy, r: 9, fill: "var(--c-unknown)", stroke: "var(--vg-ink)", "stroke-width": 2.5
+    }));
+    var lx = pos.sx + (pos.sx >= VG_CX ? 10 : -10);
+    var ly = pos.sy + (pos.sy >= VG_CY ? 14 : -8);
+    var lab = vgEl("text", { class: "centroid-label", x: lx, y: ly, "text-anchor": pos.sx >= VG_CX ? "start" : "end", fill: "var(--c-unknown)" });
+    lab.textContent = label;
+    vgUnknownLayer.appendChild(lab);
+    var sub = vgEl("text", { class: "centroid-label-sub", x: lx, y: ly + 12, "text-anchor": pos.sx >= VG_CX ? "start" : "end" });
+    sub.textContent = c.m.toFixed(2) + " @ " + c.a.toFixed(0) + "°";
+    vgUnknownLayer.appendChild(sub);
+  }
+
+  function renderRanking(result) {
+    var known = CENTROIDS.filter(function (c) { return !c.reserved; });
+    var ranked = known.map(function (c) {
+      return { cls: c.cls, dist: Math.hypot(result.centroid.x - c.x, result.centroid.y - c.y) };
+    }).sort(function (a, b) { return a.dist - b.dist; });
+    var ol = document.getElementById("vgClassifyRanking");
+    ol.innerHTML = "";
+    ranked.forEach(function (r, i) {
+      var li = document.createElement("li");
+      if (i === 0) li.className = "best";
+      li.textContent = r.cls;
+      var span = document.createElement("span");
+      span.className = "dist";
+      span.textContent = " (dist " + r.dist.toFixed(3) + ")";
+      li.appendChild(span);
+      ol.appendChild(li);
+    });
+  }
+
+  var vgFileInput = document.getElementById("vgClassifyFile");
+  var vgClassifyBtn = document.getElementById("vgClassifyBtn");
+  var vgClassifyStatus = document.getElementById("vgClassifyStatus");
+  var vgPendingFile = null;
+
+  vgFileInput.addEventListener("change", function () {
+    vgPendingFile = vgFileInput.files[0] || null;
+    vgClassifyBtn.disabled = !vgPendingFile;
+    vgClassifyStatus.textContent = vgPendingFile ? ("Ready: " + vgPendingFile.name) : "";
+    vgClassifyStatus.className = "vg-classify-status";
+  });
+
+  vgClassifyBtn.addEventListener("click", function () {
+    if (!vgPendingFile) return;
+    var pendingName = vgPendingFile.name;
+    var reader = new FileReader();
+    reader.onload = function () {
+      try {
+        var rows = parseClassifyCsv(reader.result);
+        if (!rows.length) throw new Error("No complete gas_0..9_ohm rows found in this file.");
+        var result = projectSample(rows);
+        renderUnknown(result, pendingName.replace(/\.csv$/i, ""));
+        renderRanking(result);
+        vgClassifyStatus.textContent = rows.length + " gas rows -> " + dedupeConsecutive(rows).length +
+          " distinct sweeps -> " + result.points.length + " used for projection.";
+        vgClassifyStatus.className = "vg-classify-status";
+      } catch (err) {
+        vgClassifyStatus.textContent = err.message;
+        vgClassifyStatus.className = "vg-classify-status error";
+      }
+    };
+    reader.onerror = function () {
+      vgClassifyStatus.textContent = "Could not read file.";
+      vgClassifyStatus.className = "vg-classify-status error";
+    };
+    reader.readAsText(vgPendingFile);
+  });
+})();
+</script>
+
+<script>
+(function () {
+  "use strict";
+
+  // ---------- Calibration (matches voltage_to_ppm.py) ----------
+  const VC = 5.0;
+  const CURVE_A = 1.470;
+  const CURVE_B = -0.2356;
+  // The fit was calibrated over 50-300ppm; well beyond that the power law
+  // (negative exponent) is numerically unstable and blows up toward
+  // infinity as the ratio approaches 0 (voltage nearing sensor saturation).
+  // A single noisy/spiky sample there would otherwise wreck the chart's
+  // whole y-axis scale, so treat anything past a generous margin as
+  // out-of-range rather than a real reading.
+  const PPM_SANITY_CEILING = 2000;
+  function rsOverRl(voltage) { return voltage > 0 ? (VC / voltage) - 1.0 : NaN; }
+  function voltageToPpm(voltage, r0) {
+    if (!r0 || r0 <= 0) return NaN;
+    const ratio = rsOverRl(voltage) / r0;
+    if (!(ratio > 0)) return NaN;
+    const ppm = Math.pow(ratio / CURVE_A, 1.0 / CURVE_B);
+    if (!isFinite(ppm) || ppm > PPM_SANITY_CEILING) return NaN;
+    return ppm;
+  }
+
+  // ---------- Web Serial support check ----------
+  if (!("serial" in navigator)) {
+    document.getElementById("unsupportedNotice").style.display = "block";
+    document.getElementById("mainLayout").style.display = "none";
+    return;
+  }
+
+  // ---------- DOM refs ----------
+  const el = (id) => document.getElementById(id);
+  const connDot = el("connDot"), connText = el("connText");
+  const connectBtn = el("connectBtn"), disconnectBtn = el("disconnectBtn");
+  const baudSelect = el("baudSelect");
+  const modeBadge = el("modeBadge");
+  const serialMonitor = el("serialMonitor");
+  const reconnectHint = el("reconnectHint");
+  const startBtn = el("startBtn"), stopBtn = el("stopBtn");
+  const startNamePanel = el("startNamePanel"), csvNameInput = el("csvNameInput");
+  const confirmStartBtn = el("confirmStartBtn"), cancelStartBtn = el("cancelStartBtn");
+  const markerInput = el("markerInput"), markerBtn = el("markerBtn");
+  const markerList = el("markerList");
+  const downloadBtn = el("downloadBtn");
+  const saveModeHint = el("saveModeHint");
+  const chartFileName = el("chartFileName");
+  const windowSelect = el("windowSelect");
+  const panelsContainer = el("panelsContainer");
+  const baselineOverride = el("baselineOverride");
+  const applyBaselineBtn = el("applyBaselineBtn");
+  const baselineStatus = el("baselineStatus");
+
+  // ---------- State ----------
+  let port = null, reader = null, readableClosed = null, keepReading = false;
+  let userInitiatedDisconnect = false;
+  let lineBuffer = "";
+  let columnIndex = null;   // { colName: index }
+  let sensorMode = null;    // 'full' | 'analog3'
+  let modeSource = null;    // 'header' | 'inferred' - how columnIndex got set
+
+  // The firmware only has exactly two possible CSV shapes (see the sketch's
+  // setup()). The header line that names them is only ever printed once, at
+  // boot - if the board was already running before Connect was clicked (or
+  // its reset-on-connect didn't take, which isn't guaranteed on every
+  // board), that line is gone for good. Rather than depend on catching a
+  // one-time boot event, fall back to recognizing either shape directly
+  // from a data line's column count, so data is never silently dropped
+  // just because we missed the header.
+  function buildColumnMap(names) {
+    const map = {};
+    names.forEach((n, i) => { map[n] = i; });
+    return map;
+  }
+  const FULL_MODE_COLUMNS = [
+    "timestamp_ms", "temperature_C", "pressure_Pa", "humidity_pct",
+    ...[0,1,2,3,4,5,6,7,8,9].map((i) => "gas_" + i + "_ohm"),
+    "mq137_raw_adc", "mq137_voltage_V", "mq138_raw_adc", "mq138_voltage_V",
+    "tgs2620_mode", "tgs2620_raw_adc", "tgs2620_voltage_V", "tgs2620_Rs_ohm"
+  ];
+  const ANALOG3_MODE_COLUMNS = [
+    "timestamp_ms", "mq137_raw_adc", "mq137_voltage_V", "mq138_raw_adc", "mq138_voltage_V",
+    "tgs2620_mode", "tgs2620_raw_adc", "tgs2620_voltage_V", "tgs2620_Rs_ohm"
+  ];
+
+  let isLogging = false;
+  let fileWritable = null;  // File System Access API stream, if available
+  let csvRows = [];         // in-memory fallback buffer
+  let csvFileName = "";
+  let loggingStartedAt = null; // Date.now() when Start pressed
+  let markers = [];         // {elapsed_s, note}
+
+  let baselineVoltage = null, baselineLocked = false, baselineManual = false;
+  const baselineSamples = []; // {elapsed_s, voltage}
+
+  // rolling chart buffers, keyed by series name -> [{t, v}]
+  const series = {
+    mq137_ppm: [], mq137_voltage_V: [], mq138_voltage_V: [],
+    tgs2620_Rs_ohm: [], temperature_C: [], humidity_pct: []
+  };
+  const MAX_POINTS = 20000;
+
+  function logMonitor(line) {
+    serialMonitor.textContent += line + "\n";
+    serialMonitor.scrollTop = serialMonitor.scrollHeight;
+    // keep it bounded
+    if (serialMonitor.textContent.length > 20000) {
+      serialMonitor.textContent = serialMonitor.textContent.slice(-15000);
+    }
+  }
+
+  function setConnStatus(state, text) {
+    // state: 'off' | 'connecting' | 'on' | 'error'
+    const colors = { off: "#8a94a8", connecting: "#e0a840", on: "#4fd1a5", error: "#ef5a6f" };
+    connDot.style.background = colors[state] || colors.off;
+    connText.textContent = text;
+  }
+
+  // ---------- Connect / read loop ----------
+  async function connect() {
+    try {
+      setConnStatus("connecting", "Requesting port...");
+      port = await navigator.serial.requestPort();
+      await openAndRead();
+    } catch (err) {
+      if (err && err.name === "NotFoundError") {
+        setConnStatus("off", "Disconnected");
+      } else {
+        setConnStatus("error", "Connection failed: " + err.message);
+        logMonitor("[error] " + err.message);
+      }
+    }
+  }
+
+  // The board only prints its CSV header once, at boot, and if it was
+  // already running before Connect was clicked that line is gone for good.
+  // Pulse DTR low then high to force a reset (the same trick the Arduino
+  // IDE's serial monitor relies on) so we get a fresh boot when possible -
+  // but this doesn't work on every board (DTR isn't always wired to reset),
+  // so it's a nice-to-have, not the real fix. The real fix is that
+  // handleLine() can recognize either known column layout directly from a
+  // data line's field count, so a missed header no longer blocks data.
+  async function pulseResetSignal() {
+    try {
+      await port.setSignals({ dataTerminalReady: false });
+      await new Promise((r) => setTimeout(r, 250));
+      await port.setSignals({ dataTerminalReady: true });
+    } catch (e) {
+      logMonitor("[info] Could not auto-reset device (" + e.message + ")");
+    }
+  }
+
+  async function openAndRead() {
+    userInitiatedDisconnect = false;
+    const baud = parseInt(baudSelect.value, 10);
+    await port.open({ baudRate: baud });
+    await pulseResetSignal();
+    setConnStatus("on", "Connected — waiting for data...");
+    connectBtn.disabled = true;
+    disconnectBtn.disabled = false;
+    baudSelect.disabled = true;
+    reconnectHint.textContent = "";
+
+    columnIndex = null;
+    sensorMode = null;
+    modeBadge.textContent = "Detecting sensor mode...";
+    modeBadge.className = "badge";
+
+    keepReading = true;
+    readLoop();
+
+    setTimeout(() => {
+      if (!columnIndex && keepReading) {
+        reconnectHint.textContent = "No data received after 8s — check the board is powered and running, or press its reset button.";
+      }
+    }, 8000);
+  }
+
+  async function readLoop() {
+    const textDecoder = new TextDecoderStream();
+    readableClosed = port.readable.pipeTo(textDecoder.writable).catch(() => {});
+    reader = textDecoder.readable.getReader();
+    try {
+      while (keepReading) {
+        const { value, done } = await reader.read();
+        if (done) break;
+        if (value) {
+          lineBuffer += value;
+          let idx;
+          while ((idx = lineBuffer.indexOf("\n")) >= 0) {
+            const line = lineBuffer.slice(0, idx).replace(/\r$/, "");
+            lineBuffer = lineBuffer.slice(idx + 1);
+            if (line.length) {
+              // A single malformed/unexpected line should never be able to
+              // kill the whole serial connection - log and skip it instead
+              // of letting the exception unwind out of the read loop.
+              try {
+                handleLine(line);
+              } catch (lineErr) {
+                logMonitor("[error] Failed to process line, skipping: " + lineErr.message);
+              }
+            }
+          }
+        }
+      }
+    } catch (err) {
+      logMonitor("[read error] " + err.message);
+    } finally {
+      try { reader.releaseLock(); } catch (e) {}
+    }
+
+    if (!userInitiatedDisconnect) {
+      // Device likely unplugged / crashed - try to recover.
+      handleUnexpectedDisconnect();
+    }
+  }
+
+  async function handleUnexpectedDisconnect() {
+    setConnStatus("error", "Connection lost — reconnecting...");
+    connectBtn.disabled = true;
+    let attempt = 0;
+    while (!userInitiatedDisconnect) {
+      attempt++;
+      reconnectHint.textContent = "Reconnect attempt " + attempt + "...";
+      await new Promise((r) => setTimeout(r, 2000));
+      try {
+        await port.open({ baudRate: parseInt(baudSelect.value, 10) });
+        await pulseResetSignal();
+        setConnStatus("on", "Reconnected — waiting for data...");
+        reconnectHint.textContent = "";
+        columnIndex = null;
+        sensorMode = null;
+        modeBadge.textContent = "Detecting sensor mode...";
+        keepReading = true;
+        readLoop();
+        setTimeout(() => {
+          if (!columnIndex && keepReading) {
+            reconnectHint.textContent = "No data received after 8s — check the board is powered and running, or press its reset button.";
+          }
+        }, 8000);
+        return;
+      } catch (e) {
+        // keep retrying
+      }
+    }
+  }
+
+  async function disconnect() {
+    userInitiatedDisconnect = true;
+    keepReading = false;
+    try { if (reader) await reader.cancel(); } catch (e) {}
+    try { await readableClosed; } catch (e) {}
+    try { if (port) await port.close(); } catch (e) {}
+    setConnStatus("off", "Disconnected");
+    connectBtn.disabled = false;
+    disconnectBtn.disabled = true;
+    baudSelect.disabled = false;
+    reconnectHint.textContent = "";
+    modeBadge.textContent = "No device connected";
+    modeBadge.className = "badge";
+  }
+
+  navigator.serial.addEventListener("disconnect", (e) => {
+    if (port && e.target === port) handleUnexpectedDisconnect();
+  });
+
+  // ---------- Line parsing ----------
+  function looksLikeHeader(line) {
+    return line.indexOf("timestamp_ms") === 0;
+  }
+
+  function setMode(full, source) {
+    columnIndex = buildColumnMap(full ? FULL_MODE_COLUMNS : ANALOG3_MODE_COLUMNS);
+    sensorMode = full ? "full" : "analog3";
+    modeSource = source;
+    const label = full ? "4-Sensor Array (BME688 active)" : "3-Sensor Array (BME688 unavailable)";
+    modeBadge.textContent = source === "header" ? label : label + " · detected from data";
+    modeBadge.className = "badge on";
+    reconnectHint.textContent = "";
+  }
+
+  function handleLine(line) {
+    if (looksLikeHeader(line)) {
+      const cols = line.split(",").map((c) => c.trim());
+      const full = cols.includes("temperature_C") && cols.includes("gas_0_ohm");
+      setMode(full, "header");
+      logMonitor("[header] " + line);
+      if (isLogging) writeCsvLine(buildCsvHeader());
+      return;
+    }
+
+    // Non-numeric leading char = status/debug text from the sketch, not data
+    if (!/^-?\d/.test(line)) {
+      logMonitor(line);
+      return;
+    }
+
+    if (!columnIndex) {
+      // No header seen yet (it only prints once, at boot, and may have been
+      // missed if the board was already running before Connect was
+      // clicked). The firmware only ever emits one of exactly two column
+      // counts, so infer the shape directly from this data line instead of
+      // dropping it - the header is nice-to-have, not required.
+      const fieldCount = line.split(",").length;
+      if (fieldCount === FULL_MODE_COLUMNS.length) {
+        setMode(true, "inferred");
+        logMonitor("[info] No header seen - inferred 4-sensor layout from a " + fieldCount + "-column data row.");
+      } else if (fieldCount === ANALOG3_MODE_COLUMNS.length) {
+        setMode(false, "inferred");
+        logMonitor("[info] No header seen - inferred 3-sensor layout from a " + fieldCount + "-column data row.");
+      } else {
+        // Doesn't match either known shape (e.g. a line split across a chunk
+        // boundary) - wait for a clean one rather than guess.
+        return;
+      }
+      if (isLogging) writeCsvLine(buildCsvHeader());
+    }
+
+    const parts = line.split(",");
+    if (parts.length < Object.keys(columnIndex).length) return;
+
+    const get = (name) => {
+      const i = columnIndex[name];
+      return i === undefined ? undefined : parts[i];
+    };
+    const num = (name) => {
+      const v = get(name);
+      return v === undefined || v === "" ? NaN : parseFloat(v);
+    };
+
+    const reading = {
+      timestamp_ms: num("timestamp_ms"),
+      mq137_raw_adc: num("mq137_raw_adc"),
+      mq137_voltage_V: num("mq137_voltage_V"),
+      mq138_raw_adc: num("mq138_raw_adc"),
+      mq138_voltage_V: num("mq138_voltage_V"),
+      tgs2620_mode: get("tgs2620_mode") || "",
+      tgs2620_raw_adc: num("tgs2620_raw_adc"),
+      tgs2620_voltage_V: num("tgs2620_voltage_V"),
+      tgs2620_Rs_ohm: num("tgs2620_Rs_ohm"),
+      temperature_C: sensorMode === "full" ? num("temperature_C") : NaN,
+      pressure_Pa: sensorMode === "full" ? num("pressure_Pa") : NaN,
+      humidity_pct: sensorMode === "full" ? num("humidity_pct") : NaN,
+      gas_ohm: sensorMode === "full" ? [0,1,2,3,4,5,6,7,8,9].map((i) => num("gas_" + i + "_ohm")) : null
+    };
+
+    handleReading(reading);
+  }
+
+  // ---------- Reading handling: baseline, ppm, chart, CSV ----------
+  let deviceT0 = null; // device millis() at first reading of this connection/session
+
+  function handleReading(r) {
+    if (deviceT0 === null) deviceT0 = r.timestamp_ms;
+    // elapsed must count from when Start was pressed, not from Connect -
+    // capture that origin on the first reading seen after isLogging flips
+    // true, otherwise a normal "connect, check readings, then Start" flow
+    // makes elapsed already look like it's past the 30s baseline window on
+    // the very first logged reading.
+    if (isLogging && loggingStartedAt === null) loggingStartedAt = r.timestamp_ms;
+    const elapsed = loggingStartedAt !== null
+      ? (r.timestamp_ms - loggingStartedAt) / 1000
+      : (r.timestamp_ms - deviceT0) / 1000;
+
+    // Baseline auto-detect (first 30s of the *logging* window)
+    if (isLogging && !isNaN(r.mq137_voltage_V)) {
+      if (elapsed <= 30) {
+        baselineSamples.push(r.mq137_voltage_V);
+        if (!baselineManual) {
+          const sorted = [...baselineSamples].sort((a, b) => a - b);
+          baselineVoltage = sorted[Math.floor(sorted.length / 2)];
+          baselineStatus.textContent = "Calibrating... " + Math.round((elapsed / 30) * 100) +
+            "% (median so far: " + baselineVoltage.toFixed(4) + " V)";
+        }
+      } else if (!baselineLocked && !baselineManual) {
+        baselineLocked = true;
+        // Defensive: baselineVoltage should always be set by now, but if no
+        // valid mq137_voltage_V arrived at all in the first 30s, don't crash
+        // the whole read loop over a formatting call - surface it instead.
+        baselineStatus.textContent = baselineVoltage !== null
+          ? "R0 locked: baseline " + baselineVoltage.toFixed(4) + " V (auto, median of first 30s)"
+          : "No valid NH3 readings in the first 30s - enter a manual baseline below.";
+      }
+    }
+
+    const ppm = baselineVoltage !== null ? voltageToPpm(r.mq137_voltage_V, rsOverRl(baselineVoltage)) : NaN;
+    r.mq137_ppm = ppm;
+
+    updateReadouts(r);
+    pushSeries(elapsed, r);
+    if (isLogging) appendCsvRow(elapsed, r);
+    drawAllPanels();
+  }
+
+  function updateReadouts(r) {
+    el("rMq137").textContent = isNaN(r.mq137_ppm)
+      ? (isNaN(r.mq137_voltage_V) ? "—" : r.mq137_voltage_V.toFixed(3) + " V")
+      : r.mq137_ppm.toFixed(1) + " ppm";
+    el("rMq137").className = "value" + (isNaN(r.mq137_ppm) ? " dim" : "");
+    el("rMq138").textContent = isNaN(r.mq138_voltage_V) ? "—" : r.mq138_voltage_V.toFixed(3) + " V";
+    el("rMq138").className = "value" + (isNaN(r.mq138_voltage_V) ? " dim" : "");
+    el("rTgs").textContent = isNaN(r.tgs2620_Rs_ohm) ? "—" : Math.round(r.tgs2620_Rs_ohm) + " Ω (" + (r.tgs2620_mode || "?") + ")";
+    el("rTgs").className = "value" + (isNaN(r.tgs2620_Rs_ohm) ? " dim" : "");
+    if (sensorMode === "full" && !isNaN(r.temperature_C)) {
+      el("rEnv").textContent = r.temperature_C.toFixed(1) + "°C · " + r.humidity_pct.toFixed(0) + "% RH";
+      el("rEnv").className = "value";
+    } else {
+      el("rEnv").textContent = sensorMode === "analog3" ? "n/a (BME688 offline)" : "—";
+      el("rEnv").className = "value dim";
+    }
+  }
+
+  function pushSeries(elapsed, r) {
+    for (const key of Object.keys(series)) {
+      const v = r[key];
+      if (typeof v === "number" && !isNaN(v)) {
+        series[key].push({ t: elapsed, v });
+        if (series[key].length > MAX_POINTS) series[key].shift();
+      }
+    }
+  }
+
+  // ---------- CSV logging ----------
+  function buildCsvHeader() {
+    return "computer_timestamp,elapsed_s,device_timestamp_ms,mq137_raw_adc,mq137_voltage_V,mq137_ppm," +
+      "mq138_raw_adc,mq138_voltage_V,tgs2620_mode,tgs2620_raw_adc,tgs2620_voltage_V,tgs2620_Rs_ohm," +
+      "temperature_C,pressure_Pa,humidity_pct," +
+      [0,1,2,3,4,5,6,7,8,9].map((i) => "gas_" + i + "_ohm").join(",") +
+      ",event\n";
+  }
+
+  function fmt(v, digits) {
+    return (v === undefined || v === null || isNaN(v)) ? "" : v.toFixed(digits === undefined ? 4 : digits);
+  }
+
+  function csvRowText(elapsed, r, event) {
+    const gasCols = (r.gas_ohm || [null,null,null,null,null,null,null,null,null,null])
+      .map((g) => (g === null || isNaN(g)) ? "" : g.toFixed(1)).join(",");
+    return [
+      new Date().toISOString(),
+      elapsed.toFixed(3),
+      isNaN(r.timestamp_ms) ? "" : r.timestamp_ms,
+      isNaN(r.mq137_raw_adc) ? "" : r.mq137_raw_adc,
+      fmt(r.mq137_voltage_V),
+      fmt(r.mq137_ppm, 2),
+      isNaN(r.mq138_raw_adc) ? "" : r.mq138_raw_adc,
+      fmt(r.mq138_voltage_V),
+      r.tgs2620_mode || "",
+      isNaN(r.tgs2620_raw_adc) ? "" : r.tgs2620_raw_adc,
+      fmt(r.tgs2620_voltage_V),
+      fmt(r.tgs2620_Rs_ohm, 1),
+      fmt(r.temperature_C, 2),
+      fmt(r.pressure_Pa, 1),
+      fmt(r.humidity_pct, 2),
+      gasCols,
+      event || ""
+    ].join(",") + "\n";
+  }
+
+  async function writeCsvLine(text) {
+    if (fileWritable) {
+      try { await fileWritable.write(text); } catch (e) { logMonitor("[write error] " + e.message); }
+    } else {
+      csvRows.push(text);
+    }
+  }
+
+  function appendCsvRow(elapsed, r) {
+    writeCsvLine(csvRowText(elapsed, r, ""));
+  }
+
+  // ---------- Start / stop logging ----------
+  startBtn.addEventListener("click", () => {
+    const stamp = new Date().toISOString().replace(/[:.]/g, "-").slice(0, 19);
+    csvNameInput.value = "odor_run_" + stamp + ".csv";
+    startNamePanel.style.display = "block";
+    csvNameInput.focus();
+    csvNameInput.select();
+  });
+  cancelStartBtn.addEventListener("click", () => { startNamePanel.style.display = "none"; });
+
+  confirmStartBtn.addEventListener("click", async () => {
+    let name = csvNameInput.value.trim();
+    if (!name) return;
+    if (!name.toLowerCase().endsWith(".csv")) name += ".csv";
+    csvFileName = name;
+    startNamePanel.style.display = "none";
+
+    // Reset session state
+    csvRows = [];
+    fileWritable = null;
+    markers = [];
+    markerList.innerHTML = "";
+    baselineVoltage = baselineManual ? baselineVoltage : null;
+    baselineLocked = false;
+    baselineSamples.length = 0;
+    loggingStartedAt = null; // captured from the first reading once isLogging is true - see handleReading()
+
+    if (window.showSaveFilePicker) {
+      try {
+        const handle = await window.showSaveFilePicker({ suggestedName: csvFileName,
+          types: [{ description: "CSV", accept: { "text/csv": [".csv"] } }] });
+        fileWritable = await handle.createWritable();
+        saveModeHint.textContent = "Streaming live to disk: " + csvFileName;
+      } catch (e) {
+        fileWritable = null;
+        saveModeHint.textContent = "Buffering in memory — use Download CSV when finished.";
+      }
+    } else {
+      saveModeHint.textContent = "Buffering in memory — use Download CSV when finished (File System Access API unavailable in this browser).";
+    }
+
+    await writeCsvLine(buildCsvHeader());
+
+    // Clear chart buffers here, as late as possible - not earlier in this
+    // handler. The save-file picker above is an awaited native dialog that
+    // can stay open for many seconds; pushSeries() keeps running the whole
+    // time (it's not gated on isLogging), so anything that streamed in
+    // while the user was still interacting with that dialog would still be
+    // using the old, connection-relative elapsed timeline and would corrupt
+    // the chart's time window the moment isLogging flips true and elapsed
+    // resets back near zero. Clearing right before that flip, with nothing
+    // awaited in between, means nothing more can sneak in with stale timing.
+    Object.keys(series).forEach((k) => { series[k].length = 0; });
+    drawAllPanels();
+
+    isLogging = true;
+    chartFileName.textContent = csvFileName;
+    startBtn.disabled = true;
+    stopBtn.disabled = false;
+    markerBtn.disabled = false;
+    downloadBtn.disabled = false;
+    if (!baselineManual) baselineStatus.textContent = "Calibrating... 0%";
+  });
+
+  stopBtn.addEventListener("click", async () => {
+    isLogging = false;
+    startBtn.disabled = false;
+    stopBtn.disabled = true;
+    markerBtn.disabled = true;
+    if (fileWritable) {
+      try { await fileWritable.close(); } catch (e) {}
+      fileWritable = null;
+      saveModeHint.textContent = "Saved: " + csvFileName;
+    } else {
+      saveModeHint.textContent = "Stopped. " + csvRows.length + " rows buffered — use Download CSV.";
+    }
+  });
+
+  downloadBtn.addEventListener("click", () => {
+    if (!csvRows.length) {
+      saveModeHint.textContent = "Nothing buffered to download (data was streamed straight to disk).";
+      return;
+    }
+    const blob = new Blob([buildCsvHeader(), ...csvRows.filter((r) => r !== buildCsvHeader())], { type: "text/csv" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url; a.download = csvFileName || "odor_run.csv";
+    a.click();
+    URL.revokeObjectURL(url);
+  });
+
+  // ---------- Markers ----------
+  function currentElapsed() {
+    if (series.mq137_voltage_V.length) return series.mq137_voltage_V[series.mq137_voltage_V.length - 1].t;
+    return 0;
+  }
+
+  function addMarker(note) {
+    if (!isLogging) return;
+    const elapsed = currentElapsed();
+    const text = note && note.trim() ? note.trim() : "marker";
+    markers.push({ elapsed_s: elapsed, note: text });
+    const div = document.createElement("div");
+    div.innerHTML = '<span class="t">t=' + elapsed.toFixed(1) + 's</span>' + text;
+    markerList.prepend(div);
+    writeCsvLine(csvRowText(elapsed, {
+      mq137_raw_adc: NaN, mq137_voltage_V: NaN, mq137_ppm: NaN, mq138_raw_adc: NaN, mq138_voltage_V: NaN,
+      tgs2620_mode: "", tgs2620_raw_adc: NaN, tgs2620_voltage_V: NaN, tgs2620_Rs_ohm: NaN,
+      temperature_C: NaN, pressure_Pa: NaN, humidity_pct: NaN, timestamp_ms: NaN, gas_ohm: null
+    }, text));
+    drawAllPanels();
+  }
+
+  markerBtn.addEventListener("click", () => { addMarker(markerInput.value); markerInput.value = ""; });
+  markerInput.addEventListener("keydown", (e) => {
+    if (e.key === "Enter") { addMarker(markerInput.value); markerInput.value = ""; }
+  });
+  document.addEventListener("keydown", (e) => {
+    if (e.key !== "Enter") return;
+    const tag = document.activeElement && document.activeElement.tagName;
+    if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT") return;
+    if (!isLogging) return;
+    addMarker("");
+  });
+
+  // ---------- Baseline override ----------
+  applyBaselineBtn.addEventListener("click", () => {
+    const v = parseFloat(baselineOverride.value);
+    if (isNaN(v) || v <= 0) return;
+    baselineVoltage = v;
+    baselineManual = true;
+    baselineLocked = true;
+    baselineStatus.textContent = "R0 = " + v.toFixed(4) + " V (manual override). Chart recomputed from voltage_V.";
+    // Recompute already-buffered chart ppm points from raw voltage samples
+    const r0 = rsOverRl(v);
+    series.mq137_ppm = series.mq137_voltage_V.map((p) => ({ t: p.t, v: voltageToPpm(p.v, r0) })).filter((p) => !isNaN(p.v));
+    drawAllPanels();
+  });
+
+  // ---------- Chart: 5 independent stacked panels ----------
+  const SERIES_OPTIONS = [
+    { key: "mq137_ppm", label: "NH3 (MQ137, ppm)" },
+    { key: "mq137_voltage_V", label: "NH3 (MQ137, voltage)" },
+    { key: "mq138_voltage_V", label: "VOC (MQ138, voltage)" },
+    { key: "tgs2620_Rs_ohm", label: "TGS2620 Rs (ohm)" },
+    { key: "temperature_C", label: "Temperature (C, BME688)" },
+    { key: "humidity_pct", label: "Humidity (%, BME688)" }
+  ];
+  const DEFAULT_PANEL_SERIES = [
+    "mq137_ppm", "mq137_voltage_V", "mq138_voltage_V", "tgs2620_Rs_ohm", "temperature_C"
+  ];
+  const PANEL_H = 150;
+  const panels = []; // { canvas, ctx, select, valueEl }
+
+  function buildPanels() {
+    panelsContainer.innerHTML = "";
+    panels.length = 0;
+    for (let i = 0; i < 5; i++) {
+      const div = document.createElement("div");
+      div.className = "panel";
+
+      const top = document.createElement("div");
+      top.className = "panel-top";
+
+      const select = document.createElement("select");
+      select.className = "panel-select";
+      SERIES_OPTIONS.forEach((opt) => {
+        const o = document.createElement("option");
+        o.value = opt.key; o.textContent = opt.label;
+        select.appendChild(o);
+      });
+      select.value = DEFAULT_PANEL_SERIES[i] || SERIES_OPTIONS[0].key;
+
+      const valueEl = document.createElement("span");
+      valueEl.className = "panel-value";
+      valueEl.textContent = "—";
+
+      top.appendChild(select);
+      top.appendChild(valueEl);
+
+      const canvas = document.createElement("canvas");
+      canvas.className = "panel-canvas";
+
+      div.appendChild(top);
+      div.appendChild(canvas);
+      panelsContainer.appendChild(div);
+
+      const panel = { canvas, ctx: canvas.getContext("2d"), select, valueEl };
+      select.addEventListener("change", () => drawPanel(panel));
+      panels.push(panel);
+    }
+  }
+
+  function resizePanelCanvas(panel) {
+    const dpr = window.devicePixelRatio || 1;
+    const rect = panel.canvas.getBoundingClientRect();
+    panel.canvas.width = Math.max(1, rect.width * dpr);
+    panel.canvas.height = Math.max(1, PANEL_H * dpr);
+    panel.ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  }
+
+  function resizeAllPanels() { panels.forEach(resizePanelCanvas); }
+  window.addEventListener("resize", () => { resizeAllPanels(); drawAllPanels(); });
+
+  function drawPanel(panel) {
+    const { canvas, ctx, select, valueEl } = panel;
+    const rect = canvas.getBoundingClientRect();
+    const W = rect.width || 300, H = PANEL_H;
+    ctx.clearRect(0, 0, W, H);
+
+    const key = select.value;
+    let data = series[key] || [];
+
+    const winSel = windowSelect.value;
+    if (data.length && winSel !== "all") {
+      const windowSec = parseFloat(winSel);
+      const tMax = data[data.length - 1].t;
+      data = data.filter((p) => p.t >= tMax - windowSec);
+    }
+
+    const padL = 52, padR = 12, padT = 10, padB = 20;
+    const plotW = W - padL - padR, plotH = H - padT - padB;
+
+    ctx.strokeStyle = "#2a3448";
+    ctx.fillStyle = "#8a94a8";
+    ctx.font = "10px -apple-system, sans-serif";
+    ctx.lineWidth = 1;
+
+    if (!data.length) {
+      ctx.fillText("Waiting for data...", padL, padT + plotH / 2);
+      valueEl.textContent = "—";
+      return;
+    }
+
+    let tMin = data[0].t, tMax = data[data.length - 1].t;
+    if (tMax - tMin < 1) tMax = tMin + 1;
+    let vMin = Math.min(...data.map((p) => p.v));
+    let vMax = Math.max(...data.map((p) => p.v));
+    if (vMax - vMin < 1e-6) { vMax += 1; vMin -= 1; }
+    const vPad = (vMax - vMin) * 0.08;
+    vMin -= vPad; vMax += vPad;
+
+    const xOf = (t) => padL + ((t - tMin) / (tMax - tMin)) * plotW;
+    const yOf = (v) => padT + plotH - ((v - vMin) / (vMax - vMin)) * plotH;
+
+    // gridlines + axis labels
+    ctx.beginPath();
+    for (let i = 0; i <= 3; i++) {
+      const y = padT + (plotH / 3) * i;
+      ctx.moveTo(padL, y); ctx.lineTo(padL + plotW, y);
+      const v = vMax - ((vMax - vMin) / 3) * i;
+      ctx.fillText(v.toFixed(Math.abs(v) > 100 ? 0 : 1), 2, y + 3);
+    }
+    ctx.stroke();
+
+    for (let i = 0; i <= 3; i++) {
+      const t = tMin + ((tMax - tMin) / 3) * i;
+      ctx.fillText(t.toFixed(0) + "s", xOf(t) - 10, H - 6);
+    }
+
+    // markers
+    ctx.strokeStyle = "#e0a840";
+    ctx.setLineDash([4, 3]);
+    markers.forEach((m) => {
+      if (m.elapsed_s < tMin || m.elapsed_s > tMax) return;
+      const x = xOf(m.elapsed_s);
+      ctx.beginPath(); ctx.moveTo(x, padT); ctx.lineTo(x, padT + plotH); ctx.stroke();
+      ctx.save();
+      ctx.fillStyle = "#e0a840";
+      ctx.translate(x + 3, padT + 9);
+      ctx.fillText(m.note.slice(0, 14), 0, 0);
+      ctx.restore();
+    });
+    ctx.setLineDash([]);
+
+    // series line
+    ctx.strokeStyle = "#4fd1a5";
+    ctx.lineWidth = 1.4;
+    ctx.beginPath();
+    data.forEach((p, i) => {
+      const x = xOf(p.t), y = yOf(p.v);
+      if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+    });
+    ctx.stroke();
+
+    const last = data[data.length - 1];
+    valueEl.textContent = last.v.toFixed(2);
+  }
+
+  function drawAllPanels() { panels.forEach(drawPanel); }
+
+  windowSelect.addEventListener("change", drawAllPanels);
+
+  // ---------- Wire up connect/disconnect buttons ----------
+  connectBtn.addEventListener("click", connect);
+  disconnectBtn.addEventListener("click", disconnect);
+
+  // Re-attach to a previously granted port without a new picker prompt, if one exists
+  (async function tryAutoAttach() {
+    try {
+      const ports = await navigator.serial.getPorts();
+      if (ports.length === 1) {
+        port = ports[0];
+        logMonitor("[info] Previously authorized port found — click Connect to reattach.");
+      }
+    } catch (e) {}
+  })();
+
+  buildPanels();
+  resizeAllPanels();
+  drawAllPanels();
+
+  // Exposed so the tab-switch script can force a reflow: canvases measure
+  // their container via getBoundingClientRect(), which returns 0 width
+  // while the Live Sensors tab is hidden behind the Vector Graph tab.
+  window.__redrawSensorPanels = () => { resizeAllPanels(); drawAllPanels(); };
+})();
+</script>
+</body>
+</html>
